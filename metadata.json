@@ -1,0 +1,10 @@
+{
+  "name": "Remix: Sistem Tiket Festival Monolog",
+  "description": "Sistem Tiket Online Festival Monolog Komunitas Kata Kita Lampung dengan Dashboard Verifikasi Admin dan Gate Check-In QR Code",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
