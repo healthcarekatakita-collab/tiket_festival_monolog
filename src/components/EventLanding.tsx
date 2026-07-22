@@ -83,52 +83,35 @@ interface EventLandingProps {
   initialSearchQuery?: string;
 }
 
-// Helper to render bold, professional multi-colored titles per word (Merah, Kuning Emas, Biru)
+// Helper to render bold, natural, professional title typography (Deep Crimson, Charcoal, Warm Gold)
 export const renderColorfulTitle = (titleText: string) => {
   if (!titleText) return null;
   const words = titleText.trim().split(/\s+/);
 
-  const getWordStyle = (word: string, index: number) => {
-    const clean = word.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    
-    if (clean === 'FESTIVAL') {
-      return 'text-red-600 drop-shadow-[0_1px_2px_rgba(220,38,38,0.15)]';
-    }
-    if (clean === 'MONOLOG' || clean === 'TEATER') {
-      return 'text-amber-500 drop-shadow-[0_1px_2px_rgba(245,158,11,0.15)]';
-    }
-    if (clean === 'KOMUNITAS') {
-      return 'text-blue-700 drop-shadow-[0_1px_2px_rgba(29,78,216,0.15)]';
-    }
-    if (clean === 'KATA') {
-      return 'text-red-600 drop-shadow-[0_1px_2px_rgba(220,38,38,0.15)]';
-    }
-    if (clean === 'KITA') {
-      return 'text-amber-500 drop-shadow-[0_1px_2px_rgba(245,158,11,0.15)]';
-    }
-    if (clean === '2026') {
-      return 'text-blue-700';
-    }
-
-    // Sequence fallback: Merah -> Kuning Emas -> Biru
-    const sequence = [
-      'text-red-600',
-      'text-amber-500',
-      'text-blue-700'
-    ];
-    return sequence[index % sequence.length];
-  };
-
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-2.5 sm:gap-x-3.5 gap-y-1 font-black uppercase tracking-tight leading-tight select-none">
-      {words.map((w, idx) => (
-        <span 
-          key={idx} 
-          className={`${getWordStyle(w, idx)} transition-transform hover:scale-105 inline-block`}
-        >
-          {w}
-        </span>
-      ))}
+    <span className="inline-flex flex-wrap items-baseline gap-x-2.5 sm:gap-x-3.5 gap-y-1 font-black uppercase tracking-tight leading-tight select-none">
+      {words.map((w, idx) => {
+        const clean = w.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        let style = 'text-slate-900'; // Default charcoal
+        
+        if (clean === 'FESTIVAL' || clean === 'MONOLOG') {
+          style = 'text-red-700'; // Deep crimson
+        } else if (clean === 'KOMUNITAS') {
+          style = 'text-slate-900'; // Elegant dark charcoal
+        } else if (clean === 'KATA' || clean === 'KITA') {
+          style = 'text-amber-600'; // Warm gold / amber
+        } else if (clean === 'TEATER' || clean === 'LAMPUNG') {
+          style = 'text-red-700';
+        } else if (/^\d+$/.test(clean)) {
+          style = 'text-slate-600';
+        }
+
+        return (
+          <span key={idx} className={`${style} inline-block`}>
+            {w}
+          </span>
+        );
+      })}
     </span>
   );
 };

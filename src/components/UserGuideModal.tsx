@@ -284,14 +284,8 @@ PANDUAN PENONTON:
                   Lengkap
                 </span>
               </h2>
-              <p className="text-xs text-slate-300 font-medium flex items-center gap-1 flex-wrap">
-                <span>Petunjuk penggunaan Panitia & Penonton</span>
-                <span className="font-black text-red-400">Festival</span>
-                <span className="font-black text-amber-400">Monolog</span>
-                <span className="font-black text-blue-400">Komunitas</span>
-                <span className="font-black text-red-400">Kata</span>
-                <span className="font-black text-amber-400">Kita</span>
-                <span className="font-black text-blue-300">2026</span>
+              <p className="text-xs text-slate-300 font-medium">
+                Petunjuk penggunaan untuk Panitia & Penonton <span className="font-bold text-red-400">Festival Monolog</span> <span className="font-bold text-slate-200">Komunitas</span> <span className="font-bold text-amber-400">Kata Kita 2026</span>
               </p>
             </div>
           </div>

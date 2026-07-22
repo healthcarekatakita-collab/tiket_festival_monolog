@@ -217,16 +217,15 @@ export default function App() {
               />
             </div>
             <div>
-              <h1 className="font-black text-base tracking-tight font-sans flex items-center gap-1">
-                <span className="text-blue-700">Komunitas</span>
-                <span className="text-red-600">Kata</span>
-                <span className="text-amber-500">Kita</span>
+              <h1 className="font-black text-base tracking-tight font-sans flex items-center gap-1.5">
+                <span className="text-slate-900">Komunitas</span>
+                <span className="text-red-700">Kata</span>
+                <span className="text-amber-600">Kita</span>
                 <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
               </h1>
-              <p className="text-[10px] font-mono tracking-wider font-extrabold flex items-center gap-1">
-                <span className="text-slate-600">Sistem Tiket</span>
-                <span className="text-red-600 font-black">Festival</span>
-                <span className="text-amber-600 font-black">Monolog</span>
+              <p className="text-[10px] font-mono tracking-wider font-extrabold flex items-center gap-1.5">
+                <span className="text-slate-500">Sistem Tiket</span>
+                <span className="text-red-700 font-black">Festival Monolog</span>
               </p>
             </div>
           </div>
