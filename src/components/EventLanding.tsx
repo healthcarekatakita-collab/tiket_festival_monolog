@@ -5,12 +5,76 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Calendar, MapPin, Clock, Ticket, CheckCircle, ChevronRight, Upload, 
+  Calendar, MapPin, Clock, Ticket, CheckCircle, ChevronRight, ChevronLeft, Upload, 
   Search, ShieldCheck, CreditCard, User, AlertCircle, RefreshCw, FileText,
-  Lock, Unlock, MessageSquare, ExternalLink, Share2, Users, GraduationCap, Mail, Phone
+  Lock, Unlock, MessageSquare, ExternalLink, Share2, Users, GraduationCap, Mail, Phone,
+  ArrowRight, ArrowDown, UserCheck, UploadCloud, CheckCircle2, Sparkles, School, Building2, Flame
 } from 'lucide-react';
 import { TicketCategory, EventSettings, Booking, IndividualTicket } from '../types';
 import TicketCard from './TicketCard';
+import festivalMonologLogo from '../assets/images/festival_monolog_logo_1784564565784.jpg';
+import kataKitaLogo from '../assets/images/kata_kita_logo_1784564549101.jpg';
+import monologHeroIllustration from '../assets/images/monolog_hero_illustration_1784650163715.jpg';
+
+export const BANDAR_LAMPUNG_INSTITUTIONS = [
+  // SMA Negeri di Bandar Lampung (SMAN 1 s/d SMAN 17)
+  'SMAN 1 Bandar Lampung',
+  'SMAN 2 Bandar Lampung',
+  'SMAN 3 Bandar Lampung',
+  'SMAN 4 Bandar Lampung',
+  'SMAN 5 Bandar Lampung',
+  'SMAN 6 Bandar Lampung',
+  'SMAN 7 Bandar Lampung',
+  'SMAN 8 Bandar Lampung',
+  'SMAN 9 Bandar Lampung',
+  'SMAN 10 Bandar Lampung',
+  'SMAN 11 Bandar Lampung',
+  'SMAN 12 Bandar Lampung',
+  'SMAN 13 Bandar Lampung',
+  'SMAN 14 Bandar Lampung',
+  'SMAN 15 Bandar Lampung',
+  'SMAN 16 Bandar Lampung',
+  'SMAN 17 Bandar Lampung',
+  
+  // SMK Negeri di Bandar Lampung (SMKN 1 s/d SMKN 8)
+  'SMKN 1 Bandar Lampung',
+  'SMKN 2 Bandar Lampung',
+  'SMKN 3 Bandar Lampung',
+  'SMKN 4 Bandar Lampung',
+  'SMKN 5 Bandar Lampung',
+  'SMKN 6 Bandar Lampung',
+  'SMKN 7 Bandar Lampung',
+  'SMKN 8 Bandar Lampung',
+  
+  // MAN (Madrasah Aliyah Negeri) di Bandar Lampung
+  'MAN 1 Bandar Lampung',
+  'MAN 2 Bandar Lampung',
+  
+  // SMA/SMK Swasta Ternama di Bandar Lampung
+  'SMA Al Kautsar Bandar Lampung',
+  'SMA Xaverius Pahoman Bandar Lampung',
+  'SMA YP Unila Bandar Lampung',
+  'SMA Fransiskus Bandar Lampung',
+  'SMA Kebangsaan Bandar Lampung',
+  'SMA IT Abdul Rahman Bandar Lampung',
+  'SMA Perintis Bandar Lampung',
+  'SMA Al-Azhar 3 Bandar Lampung',
+  'SMK Unila Bandar Lampung',
+
+  // Perguruan Tinggi Ternama
+  'Universitas Lampung (UNILA)',
+  'UIN Raden Intan Lampung',
+  'Institut Teknologi Sumatera (ITERA)',
+  'Universitas Bandar Lampung (UBL)',
+  'Universitas Teknokrat Indonesia',
+  'Universitas Malahayati',
+  'Poltekkes Kemenkes Tanjungkarang',
+  'Politeknik Negeri Lampung (POLINELA)',
+  'Universitas Muhammadiyah Lampung',
+  
+  // Manual Input Option
+  'Lainnya / Ketik Manual Sekolah / Kampus'
+];
 
 interface EventLandingProps {
   eventSettings: EventSettings;
@@ -18,6 +82,56 @@ interface EventLandingProps {
   onSuccessBooking: () => void;
   initialSearchQuery?: string;
 }
+
+// Helper to render bold, professional multi-colored titles per word (Merah, Kuning Emas, Biru)
+export const renderColorfulTitle = (titleText: string) => {
+  if (!titleText) return null;
+  const words = titleText.trim().split(/\s+/);
+
+  const getWordStyle = (word: string, index: number) => {
+    const clean = word.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    
+    if (clean === 'FESTIVAL') {
+      return 'text-red-600 drop-shadow-[0_1px_2px_rgba(220,38,38,0.15)]';
+    }
+    if (clean === 'MONOLOG' || clean === 'TEATER') {
+      return 'text-amber-500 drop-shadow-[0_1px_2px_rgba(245,158,11,0.15)]';
+    }
+    if (clean === 'KOMUNITAS') {
+      return 'text-blue-700 drop-shadow-[0_1px_2px_rgba(29,78,216,0.15)]';
+    }
+    if (clean === 'KATA') {
+      return 'text-red-600 drop-shadow-[0_1px_2px_rgba(220,38,38,0.15)]';
+    }
+    if (clean === 'KITA') {
+      return 'text-amber-500 drop-shadow-[0_1px_2px_rgba(245,158,11,0.15)]';
+    }
+    if (clean === '2026') {
+      return 'text-blue-700';
+    }
+
+    // Sequence fallback: Merah -> Kuning Emas -> Biru
+    const sequence = [
+      'text-red-600',
+      'text-amber-500',
+      'text-blue-700'
+    ];
+    return sequence[index % sequence.length];
+  };
+
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-2.5 sm:gap-x-3.5 gap-y-1 font-black uppercase tracking-tight leading-tight select-none">
+      {words.map((w, idx) => (
+        <span 
+          key={idx} 
+          className={`${getWordStyle(w, idx)} transition-transform hover:scale-105 inline-block`}
+        >
+          {w}
+        </span>
+      ))}
+    </span>
+  );
+};
 
 export default function EventLanding({ eventSettings, categories, onSuccessBooking, initialSearchQuery }: EventLandingProps) {
   // Navigation State
@@ -39,11 +153,14 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
   const [ticketPinError, setTicketPinError] = useState<Record<string, string>>({});
   const [showingPinForm, setShowingPinForm] = useState<Record<string, boolean>>({});
 
-  // STEP 1 Form State (Data Diri)
+  // STEP 1 Form State (Data Diri & Institusi)
   const [fullname, setFullname] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [email, setEmail] = useState('');
   const [city, setCity] = useState('');
+  const [attendeeType, setAttendeeType] = useState<'pelajar' | 'umum'>('pelajar');
+  const [selectedInstitutionPreset, setSelectedInstitutionPreset] = useState<string>('SMAN 1 Bandar Lampung');
+  const [customInstitutionText, setCustomInstitutionText] = useState<string>('');
   const [institution, setInstitution] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [ticketCount, setTicketCount] = useState<number>(1);
@@ -64,6 +181,73 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
   // Completed booking code holder
   const [completedBookingCode, setCompletedBookingCode] = useState('');
   const [completedTickets, setCompletedTickets] = useState<IndividualTicket[]>([]);
+
+  // Hero Carousel Slider Images (4:6 Aspect Ratio Posters - Requested by User)
+  const heroSliderImages = [
+    {
+      url: 'https://bagus-supriyadi.biz.id/uploads/festival-teater-monolog-kata-kita-202601.png',
+      alt: 'Festival Teater Monolog Kata Kita 2026 - Poster 1',
+      badge: 'Poster Resmi 01'
+    },
+    {
+      url: 'https://bagus-supriyadi.biz.id/uploads/festival-teater-monolog-kata-kita-202602.png',
+      alt: 'Festival Teater Monolog Kata Kita 2026 - Poster 2',
+      badge: 'Poster Resmi 02'
+    },
+    {
+      url: 'https://bagus-supriyadi.biz.id/uploads/festival-teater-monolog-kata-kita-202603.png',
+      alt: 'Festival Teater Monolog Kata Kita 2026 - Poster 3',
+      badge: 'Poster Resmi 03'
+    },
+    {
+      url: 'https://bagus-supriyadi.biz.id/uploads/festival-teater-monolog-kata-kita-202604.png',
+      alt: 'Festival Teater Monolog Kata Kita 2026 - Poster 4',
+      badge: 'Poster Resmi 04'
+    }
+  ];
+
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [isSlidePaused, setIsSlidePaused] = useState(false);
+
+  // Auto slide timer with natural timing (~4.5s)
+  useEffect(() => {
+    if (isSlidePaused) return;
+    const interval = setInterval(() => {
+      setCurrentSlideIndex(prev => (prev + 1) % heroSliderImages.length);
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [isSlidePaused, heroSliderImages.length]);
+
+  // Real-time Countdown Timer State (Target: 22 August 2026)
+  const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isPast: false });
+
+  useEffect(() => {
+    const targetTime = new Date('2026-08-22T08:00:00+07:00').getTime();
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const diff = targetTime - now;
+
+      if (diff <= 0) {
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, isPast: true });
+      } else {
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        setCountdown({ days, hours, minutes, seconds, isPast: false });
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Live Ticket Sales Calculations
+  const totalQuota = categories.reduce((sum, c) => sum + (c.quota || 0), 0);
+  const totalSold = categories.reduce((sum, c) => sum + (c.sold || 0), 0);
+  const percentSold = totalQuota > 0 ? Math.min(100, Math.round((totalSold / totalQuota) * 100)) : 0;
 
   const currentCategory = categories.find(c => c.id === selectedCategoryId);
 
@@ -273,10 +457,25 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
     }
   };
 
+  const handleCategoryChange = (catId: string) => {
+    setSelectedCategoryId(catId);
+    if (catId === 'cat-pelajar') {
+      setAttendeeType('pelajar');
+    } else if (catId === 'cat-umum') {
+      setAttendeeType('umum');
+    }
+  };
+
   const handleStartBooking = () => {
     // Pick first category as default
     if (categories.length > 0) {
-      setSelectedCategoryId(categories[0].id);
+      const defaultCat = categories[0];
+      setSelectedCategoryId(defaultCat.id);
+      if (defaultCat.id === 'cat-pelajar') {
+        setAttendeeType('pelajar');
+      } else {
+        setAttendeeType('umum');
+      }
     }
     // Reset wizard
     setBookingStep(1);
@@ -284,6 +483,8 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
     setWhatsapp('');
     setEmail('');
     setCity('');
+    setSelectedInstitutionPreset('SMAN 1 Bandar Lampung');
+    setCustomInstitutionText('');
     setInstitution('');
     setTicketCount(1);
     setTicketNames(['']);
@@ -293,6 +494,21 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
     setReceiptNumber('');
     setFormError('');
     setView('booking');
+  };
+
+  const handleStep1Submit = () => {
+    let finalInst = '';
+    if (attendeeType === 'pelajar') {
+      if (selectedInstitutionPreset === 'Lainnya / Ketik Manual Sekolah / Kampus') {
+        finalInst = customInstitutionText.trim() || 'Pelajar / Mahasiswa';
+      } else {
+        finalInst = selectedInstitutionPreset;
+      }
+    } else {
+      finalInst = customInstitutionText.trim() || 'Umum';
+    }
+    setInstitution(finalInst);
+    setBookingStep(2);
   };
 
   return (
@@ -311,74 +527,295 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
       {view === 'landing' && (
         <div className="space-y-12 pb-16">
           
-          {/* Glassmorphic Hero Banner - Vibrant Bright Premium Neon Glass */}
-          <section className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-indigo-100/90 via-sky-50 to-amber-100/80 border-2 border-indigo-200 py-16 px-6 md:px-12 text-center" id="hero-banner">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-red-500/5 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+          {/* Glassmorphic Hero Banner - 2-Column Layout */}
+          <section className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-indigo-100/95 via-sky-50 to-amber-100/90 border-2 border-indigo-200 py-10 px-6 md:px-12 text-left" id="hero-banner">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-red-500/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
             
-            <div className="max-w-3xl mx-auto space-y-6 relative z-10">
-              {/* Dual Logo Display with divider */}
-              <div className="flex items-center justify-center gap-5 mb-6 select-none">
-                <img
-                  src="https://katakita-group.biz.id/uploads/festival-monolog.png"
-                  alt="Festival Monolog"
-                  className="h-20 w-auto object-contain hover:scale-105 transition-all duration-300 drop-shadow-md"
-                />
-                <div className="w-px h-12 bg-slate-300" />
-                <img
-                  src="https://katakita-group.biz.id/uploads/komunitas-katakita.png"
-                  alt="Komunitas Kata Kita"
-                  className="h-16 w-auto object-contain hover:scale-105 transition-all duration-300 drop-shadow-md"
-                />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center relative z-10 max-w-7xl mx-auto">
+              
+              {/* LEFT COLUMN: Headline, Subheadline, Description & CTAs */}
+              <div className="lg:col-span-6 space-y-6">
+                
+                {/* Dual Logo Display with divider */}
+                <div className="inline-flex items-center gap-4 select-none bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/80 shadow-sm">
+                  <img
+                    src={festivalMonologLogo}
+                    alt="Festival Monolog"
+                    className="h-12 md:h-14 w-auto object-contain hover:scale-105 transition-all duration-300 drop-shadow-sm mix-blend-multiply"
+                  />
+                  <div className="w-px h-8 bg-slate-300" />
+                  <img
+                    src={kataKitaLogo}
+                    alt="Komunitas Kata Kita"
+                    className="h-9 md:h-10 w-auto object-contain hover:scale-105 transition-all duration-300 drop-shadow-sm mix-blend-multiply"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <span className="inline-block bg-red-600/10 text-red-600 border border-red-200/50 text-xs uppercase tracking-widest px-3 py-1 rounded-full font-mono font-black">
+                    Pementasan Seni Monolog Lampung 2026
+                  </span>
+                  
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight font-sans">
+                    {renderColorfulTitle(eventSettings.eventTitle || 'Festival Monolog Komunitas Kata Kita')}
+                  </h1>
+                  
+                  <p className="text-amber-600 font-extrabold tracking-wide text-sm md:text-base">
+                    {eventSettings.subtitle}
+                  </p>
+                </div>
+
+                <p className="text-slate-600 text-sm md:text-base leading-relaxed font-medium">
+                  {eventSettings.description}
+                </p>
+
+                <div className="flex items-center gap-2.5 bg-blue-100/70 border border-blue-200 text-blue-900 text-xs font-sans px-4 py-3 rounded-xl shadow-sm">
+                  <GraduationCap className="w-5 h-5 shrink-0 text-blue-600" />
+                  <span className="leading-normal font-semibold">
+                    <strong className="text-red-600">Pemberitahuan Pelajar:</strong> Festival ini didominasi oleh pelajar-pelajar sekolah dari seluruh penjuru se-Provinsi Lampung!
+                  </span>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                  <button
+                    onClick={handleStartBooking}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 via-amber-500 to-blue-600 text-white font-extrabold px-8 py-3.5 rounded-xl border border-red-500/20 shadow-[0_0_15px_rgba(220,38,38,0.25)] hover:shadow-[0_0_25px_rgba(220,38,38,0.45)] transform hover:-translate-y-0.5 active:scale-95 transition-all duration-300 cursor-pointer text-base"
+                    id="btn-beli-tiket"
+                  >
+                    <Ticket className="w-5 h-5 shrink-0" />
+                    <span>BELI TIKET ONLINE</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setStatusQuery('');
+                      setStatusResults([]);
+                      setStatusError('');
+                      setView('status');
+                    }}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold px-8 py-3.5 rounded-xl border border-blue-500/20 shadow-[0_0_15px_rgba(37,99,235,0.25)] hover:shadow-[0_0_25px_rgba(37,99,235,0.45)] transform hover:-translate-y-0.5 active:scale-95 transition-all duration-300 cursor-pointer text-base"
+                    id="btn-cek-tiket"
+                  >
+                    <Search className="w-5 h-5 shrink-0 text-white" />
+                    <span>CEK STATUS TIKET</span>
+                  </button>
+                </div>
+
               </div>
 
-              <span className="inline-block bg-red-600/10 text-red-600 border border-red-200/30 text-xs uppercase tracking-widest px-3 py-1 rounded-full font-mono font-black">
-                Pementasan Seni Monolog Lampung 2026
-              </span>
-              
-              <h1 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-amber-500 to-blue-700 tracking-tight leading-none font-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-                {eventSettings.eventTitle}
-              </h1>
-              
-              <p className="text-amber-600 font-extrabold tracking-wide text-sm md:text-base">
-                {eventSettings.subtitle}
-              </p>
-              
-              <p className="text-slate-600 text-sm md:text-base leading-relaxed max-w-2xl mx-auto font-medium">
-                {eventSettings.description}
-              </p>
-
-              <div className="flex items-center justify-center gap-2.5 bg-blue-100/60 border border-blue-200 text-blue-800 text-xs font-sans px-4 py-2.5 rounded-xl max-w-md mx-auto mt-4 shadow-sm">
-                <GraduationCap className="w-5 h-5 shrink-0 text-blue-600" />
-                <span className="text-left leading-normal font-semibold">
-                  <strong className="text-red-600">Pemberitahuan Pelajar:</strong> Festival ini didominasi oleh pelajar-pelajar sekolah dari seluruh penjuru se-Provinsi Lampung!
-                </span>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-6 flex flex-col sm:flex-row justify-center items-center gap-4">
-                <button
-                  onClick={handleStartBooking}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 via-amber-500 to-blue-600 text-white font-extrabold px-8 py-3.5 rounded-xl border border-red-500/20 shadow-[0_0_15px_rgba(220,38,38,0.25)] hover:shadow-[0_0_25px_rgba(220,38,38,0.45)] transform hover:-translate-y-0.5 active:scale-95 transition-all duration-300 cursor-pointer text-base"
-                  id="btn-beli-tiket"
+              {/* RIGHT COLUMN: Interactive Hero Image Slider Carousel (4:6 Vertical Poster Ratio) */}
+              <div className="lg:col-span-6 flex flex-col justify-center items-center">
+                <div 
+                  className="w-full max-w-md rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-2 border-white/90 bg-white/90 p-3.5 backdrop-blur-md transition-all duration-500 hover:shadow-[0_25px_60px_rgba(220,38,38,0.2)] space-y-3"
+                  onMouseEnter={() => setIsSlidePaused(true)}
+                  onMouseLeave={() => setIsSlidePaused(false)}
+                  id="hero-image-slider"
                 >
-                  <Ticket className="w-5 h-5 shrink-0" />
-                  <span>BELI TIKET ONLINE</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setStatusQuery('');
-                    setStatusResults([]);
-                    setStatusError('');
-                    setView('status');
-                  }}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold px-8 py-3.5 rounded-xl border border-blue-500/20 shadow-[0_0_15px_rgba(37,99,235,0.25)] hover:shadow-[0_0_25px_rgba(37,99,235,0.45)] transform hover:-translate-y-0.5 active:scale-95 transition-all duration-300 cursor-pointer text-base"
-                  id="btn-cek-tiket"
-                >
-                  <Search className="w-5 h-5 shrink-0 text-white" />
-                  <span>CEK STATUS TIKET</span>
-                </button>
+                  {/* 4:6 Aspect Ratio Container - Uncropped & High-Precision View */}
+                  <div className="relative aspect-[4/6] w-full max-h-[500px] rounded-2xl overflow-hidden bg-slate-950 group shadow-md border border-slate-800 flex items-center justify-center">
+                    {/* Slides */}
+                    {heroSliderImages.map((img, idx) => (
+                      <div
+                        key={idx}
+                        className={`absolute inset-0 transition-opacity duration-700 ease-in-out flex items-center justify-center bg-slate-950 ${
+                          idx === currentSlideIndex ? 'opacity-100 z-10 scale-100' : 'opacity-0 z-0 scale-98 pointer-events-none'
+                        }`}
+                      >
+                        <img
+                          src={img.url}
+                          alt={img.alt}
+                          className="w-full h-full object-contain rounded-2xl p-0.5"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    ))}
+
+                    {/* Navigation Prev/Next Arrows */}
+                    <button
+                      onClick={() => setCurrentSlideIndex(prev => (prev === 0 ? heroSliderImages.length - 1 : prev - 1))}
+                      className="absolute left-2.5 top-1/2 -translate-y-1/2 z-20 w-8.5 h-8.5 rounded-full bg-slate-950/70 hover:bg-slate-950 text-white backdrop-blur-md flex items-center justify-center transition cursor-pointer border border-white/20 shadow-md"
+                      title="Slide Sebelumnya"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setCurrentSlideIndex(prev => (prev + 1) % heroSliderImages.length)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 z-20 w-8.5 h-8.5 rounded-full bg-slate-950/70 hover:bg-slate-950 text-white backdrop-blur-md flex items-center justify-center transition cursor-pointer border border-white/20 shadow-md"
+                      title="Slide Selanjutnya"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Stage & Event Description Box - Positioned Cleanly BELOW the Poster */}
+                  <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-3.5 rounded-2xl border border-slate-800 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black uppercase font-mono px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                          <Sparkles className="w-3 h-3 text-amber-400" />
+                          {heroSliderImages[currentSlideIndex].badge}
+                        </span>
+                        <span className="text-[10px] font-mono font-bold text-slate-400">
+                          Poster {currentSlideIndex + 1} / {heroSliderImages.length}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-extrabold text-amber-400 font-mono uppercase tracking-widest">
+                          Panggung Utama
+                        </p>
+                        <p className="text-xs font-black text-slate-100 leading-tight">
+                          Taman Budaya Lampung • 22 - 23 Agustus 2026
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Interactive Slide Dots Indicator */}
+                    <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center bg-slate-950/60 p-1.5 rounded-xl border border-white/10">
+                      {heroSliderImages.map((_, dotIdx) => (
+                        <button
+                          key={dotIdx}
+                          onClick={() => setCurrentSlideIndex(dotIdx)}
+                          className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                            dotIdx === currentSlideIndex 
+                              ? 'w-7 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]' 
+                              : 'w-2.5 bg-slate-700 hover:bg-slate-500'
+                          }`}
+                          title={`Tampilkan Poster ${dotIdx + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
               </div>
+
+            </div>
+          </section>
+
+          {/* REAL-TIME COUNTDOWN TIMER & LIVE TICKET SALES STATUS BANNER */}
+          <section className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border-2 border-amber-500/30 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden" id="countdown-ticket-banner">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-80 h-80 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+              
+              {/* Left Column: Real-Time Countdown to 22 August 2026 */}
+              <div className="lg:col-span-6 space-y-4 text-center lg:text-left">
+                <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono font-black uppercase px-3.5 py-1 rounded-full">
+                  <Clock className="w-4 h-4 text-amber-400 animate-pulse" />
+                  <span>Hitung Mundur Waktu Menjelang Acara</span>
+                </div>
+
+                <div className="space-y-1">
+                  <h2 className="text-xl md:text-2xl font-black text-white font-sans tracking-tight">
+                    Menuju Pementasan Monolog Lampung 2026
+                  </h2>
+                  <p className="text-xs text-slate-300 font-medium">
+                    22 Agustus 2026 • Taman Budaya Lampung (Bandar Lampung)
+                  </p>
+                </div>
+
+                {/* Countdown Digit Badges */}
+                <div className="grid grid-cols-4 gap-2.5 sm:gap-4 max-w-md mx-auto lg:mx-0 pt-2">
+                  {/* Days */}
+                  <div className="bg-slate-950/80 border border-amber-500/20 rounded-2xl p-3 text-center shadow-lg">
+                    <span className="block text-2xl sm:text-3xl font-black text-amber-400 font-mono tracking-tight">
+                      {String(countdown.days).padStart(2, '0')}
+                    </span>
+                    <span className="text-[10px] font-extrabold uppercase text-slate-400 font-mono tracking-wider">
+                      Hari
+                    </span>
+                  </div>
+
+                  {/* Hours */}
+                  <div className="bg-slate-950/80 border border-amber-500/20 rounded-2xl p-3 text-center shadow-lg">
+                    <span className="block text-2xl sm:text-3xl font-black text-amber-400 font-mono tracking-tight">
+                      {String(countdown.hours).padStart(2, '0')}
+                    </span>
+                    <span className="text-[10px] font-extrabold uppercase text-slate-400 font-mono tracking-wider">
+                      Jam
+                    </span>
+                  </div>
+
+                  {/* Minutes */}
+                  <div className="bg-slate-950/80 border border-amber-500/20 rounded-2xl p-3 text-center shadow-lg">
+                    <span className="block text-2xl sm:text-3xl font-black text-amber-400 font-mono tracking-tight">
+                      {String(countdown.minutes).padStart(2, '0')}
+                    </span>
+                    <span className="text-[10px] font-extrabold uppercase text-slate-400 font-mono tracking-wider">
+                      Menit
+                    </span>
+                  </div>
+
+                  {/* Seconds */}
+                  <div className="bg-slate-950/80 border border-amber-500/20 rounded-2xl p-3 text-center shadow-lg">
+                    <span className="block text-2xl sm:text-3xl font-black text-red-400 font-mono tracking-tight animate-pulse">
+                      {String(countdown.seconds).padStart(2, '0')}
+                    </span>
+                    <span className="text-[10px] font-extrabold uppercase text-slate-400 font-mono tracking-wider">
+                      Detik
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Real-Time Ticket Sales Progress */}
+              <div className="lg:col-span-6 bg-slate-950/60 border border-white/10 rounded-2xl p-5 md:p-6 space-y-4 backdrop-blur-md shadow-xl">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
+                      <Flame className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold text-sm text-white font-sans">
+                        Update Tiket Terjual Real-Time
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-mono">
+                        Terintegrasi Otomatis dengan Sistem Database
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-black px-3 py-1 rounded-xl">
+                    {totalSold} / {totalQuota} Tiket Terjual
+                  </span>
+                </div>
+
+                {/* Live Progress Bar */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-xs font-mono font-bold">
+                    <span className="text-slate-300">Prosentase Kuota Terisi</span>
+                    <span className="text-amber-400">{percentSold}% Terjual</span>
+                  </div>
+                  <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-white/10">
+                    <div
+                      className="bg-gradient-to-r from-amber-500 via-emerald-500 to-green-400 h-full rounded-full transition-all duration-700 shadow-sm"
+                      style={{ width: `${percentSold}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Per Category Breakdown Pills */}
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  {categories.map(cat => (
+                    <div key={cat.id} className="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl space-y-1">
+                      <div className="flex justify-between items-center text-[10px] font-mono">
+                        <span className="text-slate-300 font-bold truncate max-w-[100px]">{cat.name}</span>
+                        <span className="text-amber-400 font-black">{cat.sold}/{cat.quota}</span>
+                      </div>
+                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-amber-500 h-full rounded-full transition-all duration-500"
+                          style={{ width: `${cat.quota > 0 ? Math.min(100, Math.round((cat.sold / cat.quota) * 100)) : 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+
             </div>
           </section>
 
@@ -422,7 +859,7 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
               <p className="text-slate-500 text-xs font-semibold">Pilihlah kursi pementasan terbaik untuk menyaksikan pertunjukan eksklusif Anda.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 w-full">
               {categories.map(cat => (
                 <div 
                   key={cat.id} 
@@ -482,28 +919,106 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
             </div>
           </section>
 
-          {/* Guidelines Section - Golden Amber light gradient */}
-          <section className="bg-gradient-to-br from-amber-100 via-amber-50/90 to-orange-50/65 border-2 border-amber-300 p-8 rounded-2xl space-y-4 shadow-lg" id="festival-instructions">
-            <h3 className="text-base font-black text-amber-600 uppercase tracking-wider font-sans border-b border-amber-200 pb-2">
-              Alur Pembelian E-Ticket & Registrasi Gate:
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 text-xs text-slate-700 font-semibold">
-              <div className="space-y-1.5 p-3 rounded-xl hover:bg-white hover:shadow-sm transition duration-300">
-                <p className="font-mono text-red-600 font-extrabold text-lg">01. Isi Biodata</p>
-                <p className="text-slate-500 leading-relaxed font-semibold">Pilih kategori kursi dan isi nama lengkap beserta data kontak untuk pendaftaran e-ticket.</p>
+          {/* Guidelines / Workflow Section - Cards with Step Arrows */}
+          <section className="space-y-6" id="festival-instructions">
+            <div className="text-center space-y-1.5">
+              <span className="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-mono font-black uppercase tracking-widest px-3 py-1 rounded-full">
+                Panduan Penonton
+              </span>
+              <h2 className="text-2xl font-black text-slate-900 font-sans uppercase tracking-tight">
+                Alur Pembelian E-Ticket & Gate Check-In
+              </h2>
+              <p className="text-slate-500 text-xs font-semibold max-w-xl mx-auto">
+                Ikuti 4 langkah mudah berikut untuk mendapatkan E-Ticket digital resmi pementasan monolog.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
+              
+              {/* Step 1 Card */}
+              <div className="bg-white border-2 border-red-200/90 p-5 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative flex flex-col justify-between group">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="bg-red-100 text-red-700 text-[10px] font-mono font-black px-2.5 py-1 rounded-lg">
+                      TAHAP 01
+                    </span>
+                    <div className="p-2 bg-red-50 text-red-600 rounded-xl group-hover:scale-110 transition-transform">
+                      <UserCheck className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <h3 className="font-extrabold text-slate-900 text-sm">Pilih Tiket & Isi Data</h3>
+                  <p className="text-slate-600 text-xs leading-relaxed font-medium">
+                    Pilih kategori (Pelajar / Umum), lalu pilih nama sekolah/kampus Anda dari daftar resmi. Masukkan WhatsApp & Email aktif.
+                  </p>
+                </div>
+                {/* Arrow indicator */}
+                <div className="hidden md:flex absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 w-7 h-7 bg-red-600 text-white rounded-full items-center justify-center shadow-md text-xs">
+                  <ArrowRight className="w-4 h-4" />
+                </div>
               </div>
-              <div className="space-y-1.5 p-3 rounded-xl hover:bg-white hover:shadow-sm transition duration-300">
-                <p className="font-mono text-amber-500 font-extrabold text-lg">02. Pembayaran</p>
-                <p className="text-slate-500 leading-relaxed font-semibold">Lakukan transfer ke rekening resmi panitia Mandiri atau lapor lunas kepada koordinator offline tiket.</p>
+
+              {/* Step 2 Card */}
+              <div className="bg-white border-2 border-amber-200/90 p-5 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative flex flex-col justify-between group">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="bg-amber-100 text-amber-800 text-[10px] font-mono font-black px-2.5 py-1 rounded-lg">
+                      TAHAP 02
+                    </span>
+                    <div className="p-2 bg-amber-50 text-amber-600 rounded-xl group-hover:scale-110 transition-transform">
+                      <CreditCard className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <h3 className="font-extrabold text-slate-900 text-sm">Pembayaran Resmi</h3>
+                  <p className="text-slate-600 text-xs leading-relaxed font-medium">
+                    Transfer ke Rekening Bank Mandiri Panitia atau selesaikan pembayaran tunai melalui Koordinator Offline resmi.
+                  </p>
+                </div>
+                {/* Arrow indicator */}
+                <div className="hidden md:flex absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 w-7 h-7 bg-amber-500 text-white rounded-full items-center justify-center shadow-md text-xs">
+                  <ArrowRight className="w-4 h-4" />
+                </div>
               </div>
-              <div className="space-y-1.5 p-3 rounded-xl hover:bg-white hover:shadow-sm transition duration-300">
-                <p className="font-mono text-blue-600 font-extrabold text-lg">03. Upload Bukti</p>
-                <p className="text-slate-500 leading-relaxed font-semibold">Unggah foto struk transfer ATM atau kwitansi offline Anda ke dalam sistem sebagai bukti otentik.</p>
+
+              {/* Step 3 Card */}
+              <div className="bg-white border-2 border-blue-200/90 p-5 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative flex flex-col justify-between group">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="bg-blue-100 text-blue-700 text-[10px] font-mono font-black px-2.5 py-1 rounded-lg">
+                      TAHAP 03
+                    </span>
+                    <div className="p-2 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
+                      <UploadCloud className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <h3 className="font-extrabold text-slate-900 text-sm">Unggah Bukti Bayar</h3>
+                  <p className="text-slate-600 text-xs leading-relaxed font-medium">
+                    Upload foto struk transfer / kwitansi offline. Sistem menerbitkan Kode Booking unik untuk melacak status pesanan Anda.
+                  </p>
+                </div>
+                {/* Arrow indicator */}
+                <div className="hidden md:flex absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 w-7 h-7 bg-blue-600 text-white rounded-full items-center justify-center shadow-md text-xs">
+                  <ArrowRight className="w-4 h-4" />
+                </div>
               </div>
-              <div className="space-y-1.5 p-3 rounded-xl hover:bg-white hover:shadow-sm transition duration-300">
-                <p className="font-mono text-emerald-600 font-extrabold text-lg">04. Gate Check-In</p>
-                <p className="text-slate-500 leading-relaxed font-semibold">Panitia memverifikasi pesanan Anda. Unduh E-Ticket digital dan tunjukkan QR Code untuk dipindai di pintu masuk.</p>
+
+              {/* Step 4 Card */}
+              <div className="bg-white border-2 border-emerald-200/90 p-5 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative flex flex-col justify-between group">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-mono font-black px-2.5 py-1 rounded-lg">
+                      TAHAP 04
+                    </span>
+                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl group-hover:scale-110 transition-transform">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <h3 className="font-extrabold text-slate-900 text-sm">E-Ticket & Gate Check-In</h3>
+                  <p className="text-slate-600 text-xs leading-relaxed font-medium">
+                    Panitia memverifikasi pesanan. E-Ticket QR Code siap diunduh & dipindai langsung di panggung Taman Budaya Lampung.
+                  </p>
+                </div>
               </div>
+
             </div>
           </section>
 
@@ -547,14 +1062,43 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
                 </div>
 
                 <div className="space-y-4 text-xs text-slate-700">
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 border-b border-slate-200/80 pb-4">
+                    <div className="sm:col-span-8">
+                      <label className="block text-slate-600 mb-1.5 font-bold">Pilih Kategori Kursi Tiket</label>
+                      <select
+                        value={selectedCategoryId}
+                        onChange={(e) => handleCategoryChange(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-slate-800 rounded-lg focus:outline-none focus:border-amber-500 focus:bg-white transition-all font-semibold"
+                      >
+                        {categories.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.name.split(' (')[0]} - Rp {c.price.toLocaleString('id-ID')} ({c.quota - c.sold} Kursi Tersisa)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="sm:col-span-4">
+                      <label className="block text-slate-600 mb-1.5 font-bold">Jumlah Pembelian</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={10}
+                        required
+                        value={ticketCount}
+                        onChange={(e) => handleTicketCountChange(Math.max(1, parseInt(e.target.value, 10)))}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-center font-mono font-extrabold focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-slate-600 mb-1.5 font-bold">Nama Lengkap Pemesan (Sesuai KTP/SIM/Paspor)</label>
+                    <label className="block text-slate-600 mb-1.5 font-bold">Nama Lengkap Pemesan (Sesuai KTP/Kartu Pelajar)</label>
                     <input
                       type="text"
                       required
                       value={fullname}
                       onChange={(e) => setFullname(e.target.value)}
-                      placeholder="Masukkan nama lengkap"
+                      placeholder="Masukkan nama lengkap pemesan"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white transition-all font-medium"
                     />
                   </div>
@@ -596,45 +1140,87 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white transition-all font-medium"
                       />
                     </div>
+
                     <div>
-                      <label className="block text-slate-600 mb-1.5 font-bold">Instansi / Sekolah / Kampus (Opsional)</label>
-                      <input
-                        type="text"
-                        value={institution}
-                        onChange={(e) => setInstitution(e.target.value)}
-                        placeholder="Contoh: Universitas Lampung"
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white transition-all font-medium"
-                      />
+                      <label className="block text-slate-600 mb-1.5 font-bold">Status Penonton</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setAttendeeType('pelajar')}
+                          className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-xs font-extrabold transition-all cursor-pointer ${
+                            attendeeType === 'pelajar' 
+                              ? 'bg-red-600 text-white border-red-600 shadow-sm' 
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          <GraduationCap className="w-4 h-4" />
+                          <span>Pelajar / Mhs</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAttendeeType('umum')}
+                          className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-xs font-extrabold transition-all cursor-pointer ${
+                            attendeeType === 'umum' 
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          <Users className="w-4 h-4" />
+                          <span>Umum</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 border-t border-slate-100 pt-4 mt-2">
-                    <div className="sm:col-span-8">
-                      <label className="block text-slate-600 mb-1.5 font-bold">Pilih Kategori Kursi Tiket</label>
-                      <select
-                        value={selectedCategoryId}
-                        onChange={(e) => setSelectedCategoryId(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-slate-800 rounded-lg focus:outline-none focus:border-amber-500 focus:bg-white transition-all font-semibold"
-                      >
-                        {categories.map(c => (
-                          <option key={c.id} value={c.id}>
-                            {c.name.split(' (')[0]} - Rp {c.price.toLocaleString('id-ID')} ({c.quota - c.sold} Kursi Tersisa)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="sm:col-span-4">
-                      <label className="block text-slate-600 mb-1.5 font-bold">Jumlah Pembelian</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={10}
-                        required
-                        value={ticketCount}
-                        onChange={(e) => handleTicketCountChange(Math.max(1, parseInt(e.target.value, 10)))}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-center font-mono font-extrabold focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
-                      />
-                    </div>
+                  {/* Institution Selection Container */}
+                  <div className="bg-slate-100/80 p-4 rounded-xl border border-slate-200 space-y-3">
+                    {attendeeType === 'pelajar' ? (
+                      <div>
+                        <label className="block text-slate-700 mb-1.5 font-bold flex items-center gap-1.5">
+                          <School className="w-4 h-4 text-red-600" />
+                          <span>Pilih Sekolah / Kampus (Bandar Lampung & Sekitarnya)</span>
+                        </label>
+                        <select
+                          value={selectedInstitutionPreset}
+                          onChange={(e) => setSelectedInstitutionPreset(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-800 text-xs font-semibold focus:outline-none focus:border-red-500 shadow-sm"
+                        >
+                          {BANDAR_LAMPUNG_INSTITUTIONS.map((item, i) => (
+                            <option key={i} value={item}>
+                              {item}
+                            </option>
+                          ))}
+                        </select>
+
+                        {selectedInstitutionPreset === 'Lainnya / Ketik Manual Sekolah / Kampus' && (
+                          <div className="mt-3 space-y-1">
+                            <label className="block text-[11px] text-slate-600 font-bold">Ketik Nama Sekolah / Kampus Anda:</label>
+                            <input
+                              type="text"
+                              required
+                              value={customInstitutionText}
+                              onChange={(e) => setCustomInstitutionText(e.target.value)}
+                              placeholder="Masukkan nama sekolah / kampus lengkap"
+                              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-800 text-xs font-semibold focus:outline-none focus:border-red-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-slate-700 mb-1.5 font-bold flex items-center gap-1.5">
+                          <Building2 className="w-4 h-4 text-blue-600" />
+                          <span>Pekerjaan / Instansi / Keterangan (Opsional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={customInstitutionText}
+                          onChange={(e) => setCustomInstitutionText(e.target.value)}
+                          placeholder="Contoh: Umum / Alumni / Praktisi Seni"
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-800 text-xs font-semibold focus:outline-none focus:border-blue-500 shadow-sm"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Multi Owner Input Names */}
@@ -658,8 +1244,12 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
 
                 <div className="flex justify-end pt-4 border-t border-slate-100">
                   <button
-                    disabled={!fullname || !whatsapp || !email || !city || ticketNames.some(n => !n.trim())}
-                    onClick={() => setBookingStep(2)}
+                    disabled={
+                      !fullname || !whatsapp || !email || !city || 
+                      ticketNames.some(n => !n.trim()) ||
+                      (attendeeType === 'pelajar' && selectedInstitutionPreset === 'Lainnya / Ketik Manual Sekolah / Kampus' && !customInstitutionText.trim())
+                    }
+                    onClick={handleStep1Submit}
                     className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-amber-500 disabled:opacity-50 text-white font-extrabold px-6 py-2.5 rounded-xl border border-red-500/20 shadow-[0_0_12px_rgba(220,38,38,0.2)] hover:shadow-[0_0_20px_rgba(220,38,38,0.4)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-xs"
                     id="btn-step1-next"
                   >

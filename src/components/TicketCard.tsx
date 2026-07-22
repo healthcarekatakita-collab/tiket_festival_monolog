@@ -28,6 +28,55 @@ import { IndividualTicket, EventSettings } from '../types';
 import festivalMonologLogo from '../assets/images/festival_monolog_logo_1784564565784.jpg';
 import kataKitaLogo from '../assets/images/kata_kita_logo_1784564549101.jpg';
 
+// Helper to draw rounded rectangle on 2D canvas in a backward-compatible way
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+  fill: boolean = true,
+  stroke: boolean = false
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+  if (fill) ctx.fill();
+  if (stroke) ctx.stroke();
+}
+
+// Helper to draw an image on canvas using object-contain behavior (preserving original aspect ratio)
+function drawImageContain(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  maxW: number,
+  maxH: number
+) {
+  const imgW = img.naturalWidth || img.width;
+  const imgH = img.naturalHeight || img.height;
+  if (!imgW || !imgH) {
+    ctx.drawImage(img, x, y, maxW, maxH);
+    return;
+  }
+  const ratio = Math.min(maxW / imgW, maxH / imgH);
+  const drawW = imgW * ratio;
+  const drawH = imgH * ratio;
+  const drawX = x + (maxW - drawW) / 2;
+  const drawY = y + (maxH - drawH) / 2;
+  ctx.drawImage(img, drawX, drawY, drawW, drawH);
+}
+
 interface TicketCardProps {
   ticket: IndividualTicket;
   eventSettings: EventSettings;
@@ -115,25 +164,422 @@ export default function TicketCard({ ticket, eventSettings, onBack }: TicketCard
       });
   }, [ticket]);
 
+  // Manual high-fidelity 2D Canvas drawing engine (100% immune to CSS, viewports, iframe sandbox, and CORS-tainting crashes)
+  const generateTicketBase64 = (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1200;
+      canvas.height = 1500;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Could not get 2d context'));
+        return;
+      }
+
+      // 1. Solid Clean Background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 1200, 1500);
+
+      // 2. Decorative Vignette & Gradient Highlights
+      ctx.fillStyle = 'rgba(220, 38, 38, 0.04)'; // Red top-left
+      ctx.beginPath();
+      ctx.arc(0, 0, 450, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.06)'; // Amber center-right
+      ctx.beginPath();
+      ctx.arc(1200, 400, 500, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(29, 78, 216, 0.04)'; // Blue bottom-left
+      ctx.beginPath();
+      ctx.arc(300, 1500, 600, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 3. Double Premium Border Frame (Amber & Red)
+      ctx.lineWidth = 14;
+      ctx.strokeStyle = '#f59e0b'; // amber-500
+      ctx.strokeRect(7, 7, 1186, 1486);
+
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#dc2626'; // red-600
+      ctx.strokeRect(20, 20, 1160, 1460);
+
+      // Loading dependencies
+      const festivalImg = new Image();
+      const kataKitaImg = new Image();
+      const qrImg = new Image();
+
+      let loadedCount = 0;
+      const totalImages = 3;
+
+      const onImageLoad = () => {
+        loadedCount++;
+        if (loadedCount === totalImages) {
+          try {
+            renderTicketContent(false); // Try with logos
+          } catch (e) {
+            console.warn('Canvas render error, trying text-safe fallback to bypass CORS/taint restriction:', e);
+            renderTicketContent(true); // Fallback to safe rendering (no dynamic relative files drawn)
+          }
+        }
+      };
+
+      const onImageError = (name: string) => {
+        console.warn(`Manual canvas: ${name} failed to load, falling back dynamically`);
+        loadedCount++;
+        if (loadedCount === totalImages) {
+          renderTicketContent(true);
+        }
+      };
+
+      // Set anonymous CORS to enable sandboxed assets if possible
+      festivalImg.crossOrigin = 'anonymous';
+      kataKitaImg.crossOrigin = 'anonymous';
+      qrImg.crossOrigin = 'anonymous';
+
+      festivalImg.onload = onImageLoad;
+      festivalImg.onerror = () => onImageError('Festival Logo');
+
+      kataKitaImg.onload = onImageLoad;
+      kataKitaImg.onerror = () => onImageError('Kata Kita Logo');
+
+      qrImg.onload = onImageLoad;
+      qrImg.onerror = () => onImageError('QR Code');
+
+      // Assign sources (handling fallbacks carefully)
+      festivalImg.src = festivalLogoBase64 || festivalMonologLogo;
+      kataKitaImg.src = kataKitaLogoBase64 || kataKitaLogo;
+      qrImg.src = qrCodeUrl;
+
+      function renderTicketContent(useTextFallback: boolean) {
+        // Draw Watermark Background over the entire card first (perfect match with screen)
+        if (!useTextFallback && kataKitaImg.complete && kataKitaImg.naturalWidth > 0) {
+          ctx.save();
+          ctx.globalAlpha = 0.08; // matching the 0.09 opacity on screen
+          const wmWidth = 1200 * 0.85 * 1.25;
+          const wmHeight = 1500 * 0.85 * 1.25;
+          drawImageContain(ctx, kataKitaImg, (1200 - wmWidth) / 2, (1500 - wmHeight) / 2, wmWidth, wmHeight);
+          ctx.restore();
+        }
+
+        // --- 1. HEADER BRANDING ---
+        let logoBoxWidth = 520;
+        let festWDraw = 160;
+        let festHDraw = 80;
+        let kataWDraw = 260;
+        let kataHDraw = 60;
+        let sepX = 70 + 215;
+
+        if (!useTextFallback && festivalImg.complete && festivalImg.naturalWidth > 0 && kataKitaImg.complete && kataKitaImg.naturalWidth > 0) {
+          const festW = festivalImg.naturalWidth;
+          const festH = festivalImg.naturalHeight;
+          const kataW = kataKitaImg.naturalWidth;
+          const kataH = kataKitaImg.naturalHeight;
+
+          // Compute exact proportional sizes (matching h-8 vs h-6 on screen ratio, about 80px vs 60px height on 1200px canvas)
+          festHDraw = 80;
+          festWDraw = festW * (80 / festH);
+
+          kataHDraw = 60;
+          kataWDraw = kataW * (60 / kataH);
+
+          // We want padding: left 25px, right 25px, gap around separator 25px each
+          logoBoxWidth = 100 + festWDraw + kataWDraw;
+          sepX = 70 + 25 + festWDraw + 25;
+        }
+
+        // Draw elegant rounded white container for logos (using 100% solid white to blend seamlessly with the logos' backgrounds!)
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 3;
+        drawRoundedRect(ctx, 70, 70, logoBoxWidth, 120, 24, true, true);
+
+        if (!useTextFallback && festivalImg.complete && festivalImg.naturalWidth > 0 && kataKitaImg.complete && kataKitaImg.naturalWidth > 0) {
+          try {
+            // Draw Festival Monolog Logo
+            const festY = 70 + (120 - festHDraw) / 2;
+            ctx.drawImage(festivalImg, 70 + 25, festY, festWDraw, festHDraw);
+            
+            // Draw separator line
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(sepX, 70 + 25);
+            ctx.lineTo(sepX, 70 + 95);
+            ctx.stroke();
+
+            // Draw Komunitas Kata Kita Logo
+            const kataY = 70 + (120 - kataHDraw) / 2;
+            ctx.drawImage(kataKitaImg, sepX + 25, kataY, kataWDraw, kataHDraw);
+          } catch (err) {
+            console.warn('Image draw failed inside canvas, rewriting as text logo', err);
+            // Re-draw text logos over the box
+            drawTextLogos();
+          }
+        } else {
+          drawTextLogos();
+        }
+
+        function drawTextLogos() {
+          // Clear box content
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(70 + 5, 70 + 5, logoBoxWidth - 10, 120 - 10);
+
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          
+          ctx.font = 'bold 26px sans-serif';
+          ctx.fillStyle = '#dc2626';
+          ctx.fillText('FESTIVAL', 70 + 35, 70 + 60);
+
+          ctx.strokeStyle = '#cbd5e1';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(70 + 210, 70 + 25);
+          ctx.lineTo(70 + 210, 70 + 95);
+          ctx.stroke();
+
+          ctx.font = 'bold 24px sans-serif';
+          ctx.fillStyle = '#1e3a8a';
+          ctx.fillText('KATA KITA', 70 + 245, 70 + 60);
+        }
+
+        // --- 2. OFFICIAL PASS BADGE ---
+        ctx.fillStyle = '#dc2626'; // Red bg badge
+        drawRoundedRect(ctx, 850, 75, 280, 65, 16, true, false);
+
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('TIKET MASUK RESMI', 850 + 140, 75 + 32 + 2);
+
+        // Subtitle gate
+        ctx.font = 'bold 16px monospace';
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'right';
+        ctx.fillText('GATE ENTRY CO-2026', 1130, 165);
+
+        // --- 3. MAIN FESTIVAL TITLE ---
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Background shadow or glow effect
+        ctx.font = '900 65px sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText('FESTIVAL MONOLOG', 600, 310);
+
+        ctx.font = 'bold 24px monospace';
+        ctx.fillStyle = '#dc2626';
+        ctx.fillText('PELAJAR SE-PROVINSI LAMPUNG 2026', 600, 365);
+
+        // --- 4. TICKET CUTOUTS & DASHED LINE ---
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([20, 15]);
+        ctx.beginPath();
+        ctx.moveTo(70, 420);
+        ctx.lineTo(1130, 420);
+        ctx.stroke();
+        ctx.setLineDash([]); // Reset dashed line state
+
+        // Draw left & right side semi-circle ticket cutouts as transparent cutouts using destination-out!
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(0, 420, 35, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(1200, 420, 35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // --- 5. PARTICIPANT DETAIL BOX ---
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'; // semi-transparent white (matching the bg-white/80 backdrop-blur on screen!)
+        ctx.strokeStyle = 'rgba(226, 232, 240, 0.9)';
+        ctx.lineWidth = 4;
+        drawRoundedRect(ctx, 70, 480, 1060, 480, 32, true, true);
+
+        // Draw attendee data
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+
+        // Pemegang Tiket
+        ctx.font = 'bold 20px monospace';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('PEMEGANG TIKET', 120, 560);
+
+        ctx.font = '900 48px sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText(ticket.ownerName.toUpperCase(), 120, 610);
+
+        // Kategori Tiket
+        ctx.font = 'bold 20px monospace';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('KATEGORI TIKET', 120, 740);
+
+        ctx.font = '900 36px sans-serif';
+        ctx.fillStyle = '#dc2626';
+        ctx.fillText(ticket.categoryName.toUpperCase(), 120, 790);
+
+        // Kode Booking
+        ctx.font = 'bold 20px monospace';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('KODE BOOKING', 120, 860);
+
+        ctx.font = '900 36px monospace';
+        ctx.fillStyle = '#1d4ed8';
+        ctx.fillText(ticket.bookingCode.toUpperCase(), 120, 910);
+
+        // Vertical divider before QR Code
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(800, 530);
+        ctx.lineTo(800, 910);
+        ctx.stroke();
+
+        // Draw QR Code (QR image is generated locally, so it will never throw CORS taint errors!)
+        if (qrImg.complete && qrImg.naturalWidth > 0) {
+          ctx.save();
+          // Draw neat white card container under QR code with shadow
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
+          ctx.shadowBlur = 15;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 8;
+          drawRoundedRect(ctx, 835, 545, 260, 260, 16, true, false);
+          ctx.restore();
+
+          try {
+            drawImageContain(ctx, qrImg, 845, 555, 240, 240);
+          } catch (qrErr) {
+            console.error('Failed drawing QR image onto canvas:', qrErr);
+          }
+        } else {
+          ctx.fillStyle = '#f8fafc';
+          drawRoundedRect(ctx, 845, 555, 240, 240, 16, true, false);
+          ctx.font = 'bold 18px monospace';
+          ctx.fillStyle = '#94a3b8';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('[QR CODE]', 845 + 120, 555 + 120);
+        }
+
+        // Draw Ticket Number
+        ctx.font = 'bold 20px monospace';
+        ctx.fillStyle = '#475569';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(ticket.ticketNumber, 965, 875);
+
+        // --- 6. SCHEDULE INFO BOXES (TANGGAL, WAKTU, LOKASI) ---
+        const scheduleY = 1010;
+        const boxW = 330;
+        const boxH = 180;
+        const boxGap = 35;
+        const startX = 70;
+
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+
+        // Box 1: DATE
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 3;
+        drawRoundedRect(ctx, startX, scheduleY, boxW, boxH, 24, true, true);
+
+        ctx.font = 'bold 18px monospace';
+        ctx.fillStyle = '#dc2626';
+        ctx.fillText('TANGGAL', startX + (boxW / 2), scheduleY + 45);
+        ctx.font = '900 22px sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText(renderDate(eventSettings.date).toUpperCase(), startX + (boxW / 2), scheduleY + 115);
+
+        // Box 2: TIME
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 3;
+        drawRoundedRect(ctx, startX + boxW + boxGap, scheduleY, boxW, boxH, 24, true, true);
+
+        ctx.font = 'bold 18px monospace';
+        ctx.fillStyle = '#d97706';
+        ctx.fillText('WAKTU', startX + boxW + boxGap + (boxW / 2), scheduleY + 45);
+        ctx.font = '900 22px sans-serif';
+        ctx.fillStyle = '#0f172a';
+        const cleanTime = eventSettings.time.replace(' WIB - Selesai', '') + ' WIB';
+        ctx.fillText(cleanTime.toUpperCase(), startX + boxW + boxGap + (boxW / 2), scheduleY + 115);
+
+        // Box 3: VENUE
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 3;
+        drawRoundedRect(ctx, startX + (boxW * 2) + (boxGap * 2), scheduleY, boxW, boxH, 24, true, true);
+
+        ctx.font = 'bold 18px monospace';
+        ctx.fillStyle = '#2563eb';
+        ctx.fillText('LOKASI', startX + (boxW * 2) + (boxGap * 2) + (boxW / 2), scheduleY + 45);
+        ctx.font = '900 22px sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText('TAMAN BUDAYA', startX + (boxW * 2) + (boxGap * 2) + (boxW / 2), scheduleY + 115);
+
+        // --- 7. FOOTER AND SECURITY SIGNATURE ---
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(70, 1260);
+        ctx.lineTo(1130, 1260);
+        ctx.stroke();
+
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('KATA KITA GROUP © 2026', 70, 1320);
+
+        // Security Hash Sign Badge
+        const securityText = 'SIGN: ' + ticket.securityHash.substring(0, 16).toUpperCase();
+        ctx.font = 'bold 20px monospace';
+        const textMetrics = ctx.measureText(securityText);
+        const hashW = textMetrics.width + 30;
+        const hashH = 48;
+        const hashX = 1130 - hashW;
+        const hashY = 1296 - (hashH / 2);
+
+        ctx.fillStyle = '#f1f5f9';
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2;
+        drawRoundedRect(ctx, hashX, hashY, hashW, hashH, 8, true, true);
+
+        ctx.fillStyle = '#475569';
+        ctx.textAlign = 'center';
+        ctx.fillText(securityText, hashX + (hashW / 2), hashY + (hashH / 2) + 1);
+
+        // --- 8. EXPORT IMAGE ---
+        try {
+          const dataUrl = canvas.toDataURL('image/png');
+          resolve(dataUrl);
+        } catch (exportErr) {
+          console.warn('Canvas was tainted despite load configurations. Re-rendering with strict text logos fallback.');
+          if (!useTextFallback) {
+            renderTicketContent(true);
+          } else {
+            reject(exportErr);
+          }
+        }
+      }
+    });
+  };
+
   // Method to trigger automatic PNG download & open fallback/preview modal instantly so user is never left hanging
   const handleDownload = async () => {
-    if (!ticketRef.current) return;
     setDownloading(true);
     setModalMode('png');
     
     try {
-      // Short timeout to guarantee QR is fully painted
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      const canvas = await html2canvas(ticketRef.current, {
-        scale: 3, // High definition quality
-        useCORS: true,
-        logging: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff'
-      });
-      
-      const imageUri = canvas.toDataURL('image/png');
+      const imageUri = await generateTicketBase64();
       setFallbackImageUri(imageUri);
       setIsModalOpen(true);
 
@@ -149,7 +595,8 @@ export default function TicketCard({ ticket, eventSettings, onBack }: TicketCard
         console.warn('Automatic link.click download was blocked by browser sandbox:', dlErr);
       }
     } catch (err) {
-      console.error('Failed to generate ticket image:', err);
+      console.error('Failed to generate ticket image via manual canvas:', err);
+      alert('Gagal membuat gambar tiket. Silakan coba lagi atau buka halaman ini di Tab Baru.');
     } finally {
       setDownloading(false);
     }
@@ -157,22 +604,11 @@ export default function TicketCard({ ticket, eventSettings, onBack }: TicketCard
 
   // Method to trigger automatic PDF download & open native printing fallback modal instantly
   const handlePrint = async () => {
-    if (!ticketRef.current) return;
     setDownloading(true);
     setModalMode('pdf');
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      const canvas = await html2canvas(ticketRef.current, {
-        scale: 3,
-        useCORS: true,
-        logging: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff'
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = await generateTicketBase64();
       setFallbackImageUri(imgData);
       setIsModalOpen(true);
 
@@ -189,16 +625,27 @@ export default function TicketCard({ ticket, eventSettings, onBack }: TicketCard
         console.warn('Automatic PDF generation or save was blocked by browser sandbox:', pdfErr);
       }
     } catch (err) {
-      console.error('Failed to generate ticket PDF:', err);
+      console.error('Failed to generate ticket PDF via manual canvas:', err);
+      alert('Gagal membuat PDF tiket. Silakan simpan gambar tiket di bawah ini.');
     } finally {
       setDownloading(false);
     }
   };
 
-  // Alternative manual trigger
+  // Alternative manual trigger (Opens modal instantly)
   const handleGenerateManualImage = async () => {
     setModalMode('png');
-    await handleDownload();
+    setDownloading(true);
+    try {
+      const imgData = await generateTicketBase64();
+      setFallbackImageUri(imgData);
+      setIsModalOpen(true);
+    } catch (err) {
+      console.error('Failed to generate manual image:', err);
+      alert('Gagal membuat pratinjau tiket.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   // Direct programmatic download for PDF within the modal
@@ -323,17 +770,17 @@ export default function TicketCard({ ticket, eventSettings, onBack }: TicketCard
           {/* Section 1: Header (Official Logo & Pass Badge) */}
           <div className="flex items-center justify-between gap-4">
             {/* Transparent Community & Festival brand identity */}
-            <div className="flex items-center gap-1.5 bg-white/80 backdrop-blur-sm px-2.5 py-1.5 rounded-xl border border-slate-200/60 shadow-sm min-h-[44px]">
+            <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-slate-200/60 shadow-sm min-h-[44px]">
               <img
                 src={festivalLogoBase64 || festivalMonologLogo}
                 alt="Festival Monolog Logo"
-                className="h-8 w-auto object-contain"
+                className="h-8 w-auto object-contain mix-blend-multiply"
               />
               <div className="w-px h-6 bg-slate-300" />
               <img
                 src={kataKitaLogoBase64 || kataKitaLogo}
                 alt="Komunitas Kata Kita Logo"
-                className="h-6 w-auto object-contain"
+                className="h-6 w-auto object-contain mix-blend-multiply"
               />
             </div>
             

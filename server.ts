@@ -138,8 +138,8 @@ function initializeDB() {
     {
       id: 'cat-umum',
       name: 'Umum (Reguler)',
-      price: 50000,
-      quota: 150,
+      price: 35000,
+      quota: 50,
       sold: 1,
       description: "Rasakan kedalaman emosi, kritik sosial, dan pementasan monolog paling spektakuler di Lampung! Kategori ini terbuka untuk seluruh pecinta seni teater, alumni, praktisi seni, dan masyarakat umum. Bersiaplah terhanyut dalam karakter kuat dan tata panggung yang memukau!"
     },
@@ -147,7 +147,7 @@ function initializeDB() {
       id: 'cat-pelajar',
       name: 'Pelajar / Mahasiswa',
       price: 35000,
-      quota: 350,
+      quota: 450,
       sold: 2,
       description: "Dukungan penuh untuk kreativitas generasi muda! Penawaran khusus bagi pelajar aktif (SMP/SMA/Sederajat) & mahasiswa se-Provinsi Lampung. Jadilah saksi perjuangan seni peran sekolah jagoanmu secara langsung di atas panggung megah! *Wajib menunjukkan Kartu Identitas Pelajar/Mahasiswa aktif di lokasi.*"
     }
@@ -171,7 +171,7 @@ function initializeDB() {
     googleAppsScriptUrl: ''
   };
 
-  // Seeding 3 bookings
+  // Seeding sample bookings with diverse schools/campuses
   const sampleBookings: Booking[] = [
     {
       id: 'A8D92F',
@@ -181,7 +181,7 @@ function initializeDB() {
       city: 'Bandar Lampung',
       institution: 'Universitas Lampung',
       ticketCount: 1,
-      categoryId: 'cat-umum',
+      categoryId: 'cat-pelajar',
       bookingDate: '2026-07-18T14:35:00.000Z',
       status: 'Lunas',
       verificationStatus: 'Disetujui',
@@ -191,13 +191,13 @@ function initializeDB() {
         bankAccount: '114-00-2234455-8',
         bankAccountName: 'Komunitas Kata Kita'
       },
-      paymentProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', // tiny 1px png
+      paymentProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
       tickets: [
         {
           ticketNumber: 'FMKKL-2026-000001',
           bookingCode: 'A8D92F',
           ownerName: 'Muhammad Farhan',
-          categoryName: 'Umum (Reguler)',
+          categoryName: 'Pelajar / Mahasiswa',
           isCheckedIn: false,
           checkInTime: null,
           securityHash: generateSecurityHash('FMKKL-2026-000001', 'A8D92F', 'Muhammad Farhan'),
@@ -207,15 +207,109 @@ function initializeDB() {
       notes: 'Terverifikasi otomatis saat seed database.'
     },
     {
-      id: 'KKX813',
+      id: 'SMN201',
       fullname: 'Dewi Lestari',
       whatsapp: '085766223344',
       email: 'dewi.lestari@gmail.com',
-      city: 'Metro',
-      institution: 'MAN 1 Metro',
-      ticketCount: 1,
+      city: 'Bandar Lampung',
+      institution: 'SMAN 2 Bandar Lampung',
+      ticketCount: 2,
       categoryId: 'cat-pelajar',
       bookingDate: '2026-07-19T09:12:00.000Z',
+      status: 'Lunas',
+      verificationStatus: 'Disetujui',
+      paymentMethod: 'transfer',
+      bankDetails: {
+        bankName: 'Bank Mandiri',
+        bankAccount: '114-00-2234455-8',
+        bankAccountName: 'Komunitas Kata Kita'
+      },
+      paymentProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+      tickets: [
+        {
+          ticketNumber: 'FMKKL-2026-000002',
+          bookingCode: 'SMN201',
+          ownerName: 'Dewi Lestari',
+          categoryName: 'Pelajar / Mahasiswa',
+          isCheckedIn: false,
+          checkInTime: null,
+          securityHash: generateSecurityHash('FMKKL-2026-000002', 'SMN201', 'Dewi Lestari'),
+          accessCode: 'TKT-DEW55'
+        },
+        {
+          ticketNumber: 'FMKKL-2026-000003',
+          bookingCode: 'SMN201',
+          ownerName: 'Salsa Bila',
+          categoryName: 'Pelajar / Mahasiswa',
+          isCheckedIn: false,
+          checkInTime: null,
+          securityHash: generateSecurityHash('FMKKL-2026-000003', 'SMN201', 'Salsa Bila'),
+          accessCode: 'TKT-SAL22'
+        }
+      ]
+    },
+    {
+      id: 'SMN301',
+      fullname: 'Siti Aisyah',
+      whatsapp: '081399887766',
+      email: 'siti.aisyah@gmail.com',
+      city: 'Bandar Lampung',
+      institution: 'SMAN 3 Bandar Lampung',
+      ticketCount: 3,
+      categoryId: 'cat-pelajar',
+      bookingDate: '2026-07-19T10:20:00.000Z',
+      status: 'Lunas',
+      verificationStatus: 'Disetujui',
+      paymentMethod: 'transfer',
+      bankDetails: {
+        bankName: 'Bank Mandiri',
+        bankAccount: '114-00-2234455-8',
+        bankAccountName: 'Komunitas Kata Kita'
+      },
+      paymentProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+      tickets: [
+        {
+          ticketNumber: 'FMKKL-2026-000004',
+          bookingCode: 'SMN301',
+          ownerName: 'Siti Aisyah',
+          categoryName: 'Pelajar / Mahasiswa',
+          isCheckedIn: false,
+          checkInTime: null,
+          securityHash: generateSecurityHash('FMKKL-2026-000004', 'SMN301', 'Siti Aisyah'),
+          accessCode: 'TKT-AIS11'
+        },
+        {
+          ticketNumber: 'FMKKL-2026-000005',
+          bookingCode: 'SMN301',
+          ownerName: 'Bunga Citra',
+          categoryName: 'Pelajar / Mahasiswa',
+          isCheckedIn: false,
+          checkInTime: null,
+          securityHash: generateSecurityHash('FMKKL-2026-000005', 'SMN301', 'Bunga Citra'),
+          accessCode: 'TKT-BUN33'
+        },
+        {
+          ticketNumber: 'FMKKL-2026-000006',
+          bookingCode: 'SMN301',
+          ownerName: 'Rina Nose',
+          categoryName: 'Pelajar / Mahasiswa',
+          isCheckedIn: false,
+          checkInTime: null,
+          securityHash: generateSecurityHash('FMKKL-2026-000006', 'SMN301', 'Rina Nose'),
+          accessCode: 'TKT-RIN44'
+        }
+      ]
+    },
+    {
+      id: 'SMN302',
+      fullname: 'Budi Santoso',
+      whatsapp: '082188776655',
+      email: 'budi.santoso@yahoo.com',
+      city: 'Bandar Lampung',
+      institution: 'SMAN 3 Bandar Lampung',
+      ticketCount: 1,
+      categoryId: 'cat-pelajar',
+      bookingDate: '2026-07-20T08:15:00.000Z',
       status: 'Menunggu Verifikasi',
       verificationStatus: 'Belum Diverifikasi',
       paymentMethod: 'transfer',
@@ -227,14 +321,88 @@ function initializeDB() {
       paymentProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
       tickets: [
         {
-          ticketNumber: 'FMKKL-2026-000003',
-          bookingCode: 'KKX813',
-          ownerName: 'Dewi Lestari',
+          ticketNumber: 'FMKKL-2026-000007',
+          bookingCode: 'SMN302',
+          ownerName: 'Budi Santoso',
           categoryName: 'Pelajar / Mahasiswa',
           isCheckedIn: false,
           checkInTime: null,
-          securityHash: generateSecurityHash('FMKKL-2026-000003', 'KKX813', 'Dewi Lestari'),
-          accessCode: 'TKT-DEW55'
+          securityHash: generateSecurityHash('FMKKL-2026-000007', 'SMN302', 'Budi Santoso'),
+          accessCode: 'TKT-BUD99'
+        }
+      ]
+    },
+    {
+      id: 'SMN101',
+      fullname: 'Andi Pratama',
+      whatsapp: '081234567811',
+      email: 'andi.pratama@gmail.com',
+      city: 'Bandar Lampung',
+      institution: 'SMAN 1 Bandar Lampung',
+      ticketCount: 2,
+      categoryId: 'cat-pelajar',
+      bookingDate: '2026-07-20T09:30:00.000Z',
+      status: 'Lunas',
+      verificationStatus: 'Disetujui',
+      paymentMethod: 'transfer',
+      bankDetails: {
+        bankName: 'Bank Mandiri',
+        bankAccount: '114-00-2234455-8',
+        bankAccountName: 'Komunitas Kata Kita'
+      },
+      paymentProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+      tickets: [
+        {
+          ticketNumber: 'FMKKL-2026-000008',
+          bookingCode: 'SMN101',
+          ownerName: 'Andi Pratama',
+          categoryName: 'Pelajar / Mahasiswa',
+          isCheckedIn: false,
+          checkInTime: null,
+          securityHash: generateSecurityHash('FMKKL-2026-000008', 'SMN101', 'Andi Pratama'),
+          accessCode: 'TKT-AND11'
+        },
+        {
+          ticketNumber: 'FMKKL-2026-000009',
+          bookingCode: 'SMN101',
+          ownerName: 'Reza Rahadian',
+          categoryName: 'Pelajar / Mahasiswa',
+          isCheckedIn: false,
+          checkInTime: null,
+          securityHash: generateSecurityHash('FMKKL-2026-000009', 'SMN101', 'Reza Rahadian'),
+          accessCode: 'TKT-REZ88'
+        }
+      ]
+    },
+    {
+      id: 'XAV101',
+      fullname: 'Maria Angelina',
+      whatsapp: '089677889911',
+      email: 'maria.angela@gmail.com',
+      city: 'Bandar Lampung',
+      institution: 'SMA Xaverius 1 Bandar Lampung',
+      ticketCount: 1,
+      categoryId: 'cat-pelajar',
+      bookingDate: '2026-07-20T11:00:00.000Z',
+      status: 'Lunas',
+      verificationStatus: 'Disetujui',
+      paymentMethod: 'offline',
+      offlineDetails: {
+        coordinatorName: 'Rere (Hotline Panitia 1)',
+        coordinatorPhone: '083125721380',
+        receiptNumber: 'KW-00122'
+      },
+      offlineProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+      tickets: [
+        {
+          ticketNumber: 'FMKKL-2026-000010',
+          bookingCode: 'XAV101',
+          ownerName: 'Maria Angelina',
+          categoryName: 'Pelajar / Mahasiswa',
+          isCheckedIn: false,
+          checkInTime: null,
+          securityHash: generateSecurityHash('FMKKL-2026-000010', 'XAV101', 'Maria Angelina'),
+          accessCode: 'TKT-MAR77'
         }
       ]
     },
@@ -252,21 +420,21 @@ function initializeDB() {
       verificationStatus: 'Ditolak',
       paymentMethod: 'offline',
       offlineDetails: {
-        coordinatorName: 'Andi Wijaya (Koordinator Umum)',
-        coordinatorPhone: '081234567890',
+        coordinatorName: 'EL (Hotline Panitia 2)',
+        coordinatorPhone: '082159057672',
         receiptNumber: 'KW-09887'
       },
       offlineProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
       rejectReason: 'Foto bukti kwitansi tidak terbaca / buram. Silakan unggah ulang.',
       tickets: [
         {
-          ticketNumber: 'FMKKL-2026-000002',
+          ticketNumber: 'FMKKL-2026-000011',
           bookingCode: 'MON456',
           ownerName: 'Rian Hidayat',
           categoryName: 'Umum (Reguler)',
           isCheckedIn: false,
           checkInTime: null,
-          securityHash: generateSecurityHash('FMKKL-2026-000002', 'MON456', 'Rian Hidayat'),
+          securityHash: generateSecurityHash('FMKKL-2026-000011', 'MON456', 'Rian Hidayat'),
           accessCode: 'TKT-RIA22'
         }
       ]
@@ -699,9 +867,11 @@ async function startServer() {
         
 Selamat! Pembayaran Anda sebesar Rp ${(booking.tickets.length * (db.categories.find((c: any) => c.id === booking.categoryId)?.price || 0)).toLocaleString('id-ID')} telah diverifikasi oleh panitia Festival Monolog Komunitas Kata Kita.
 
-Informasi Booking:
+Informasi Registrasi Penonton:
 - Kode Booking: ${booking.id}
-- Jumlah Tiket: ${booking.ticketCount}
+- Nama Pemesan: ${booking.fullname}
+- Sekolah/Kampus: ${booking.institution || 'Umum'}
+- Jumlah Tiket: ${booking.ticketCount} Lembar
 
 Rincian Kode Akses E-Ticket untuk masing-masing penonton:
 ${ticketDetailsList}
@@ -735,6 +905,13 @@ Panitia Festival Monolog Komunitas Kata Kita`;
 
         addEmail(booking.email, 'Pemberitahuan Verifikasi Tiket Ditangguhkan', emailBody, 'Sent');
         addLog(operator, 'Penolakan Tiket', `Pemesanan ${booking.id} (${booking.fullname}) ditolak. Alasan: ${booking.rejectReason}`);
+      } else if (action === 'reset_pending') {
+        booking.status = 'Menunggu Verifikasi';
+        booking.verificationStatus = 'Menunggu Verifikasi';
+        booking.rejectReason = undefined;
+        booking.notes = notes || 'Status dikembalikan ke Menunggu Verifikasi oleh panitia.';
+
+        addLog(operator, 'Reset Status Tiket', `Pemesanan ${booking.id} (${booking.fullname}) dikembalikan ke Menunggu Verifikasi.`);
       } else {
         return res.status(400).json({ error: 'Tindakan tidak valid.' });
       }
@@ -745,6 +922,111 @@ Panitia Festival Monolog Komunitas Kata Kita`;
       res.json({ success: true, booking });
     } catch (error: any) {
       res.status(500).json({ error: 'Gagal memverifikasi tiket: ' + error.message });
+    }
+  });
+
+  // 6b. POST Resend / Trigger Direct Email to Participant (Admin Action)
+  app.post('/api/admin/emails/resend', (req, res) => {
+    try {
+      const { bookingId, operatorName } = req.body;
+      if (!bookingId) {
+        return res.status(400).json({ error: 'Kode Booking wajib dispesifikasikan.' });
+      }
+
+      const db = getDB();
+      const booking = db.bookings.find((b: Booking) => b.id === bookingId);
+      if (!booking) {
+        return res.status(404).json({ error: 'Data pemesanan tidak ditemukan.' });
+      }
+
+      const categoryName = db.categories.find((c: any) => c.id === booking.categoryId)?.name || booking.categoryId;
+
+      const ticketDetailsText = booking.tickets.map((t: any) => {
+        const directUrl = `${process.env.APP_URL || 'http://localhost:3000'}/?ticket=${t.accessCode || ''}`;
+        return `• Nama Penonton: ${t.ownerName}\n  Nomor Tiket : ${t.ticketNumber}\n  PIN Akses    : ${t.accessCode || 'N/A'}\n  Link E-Ticket: ${directUrl}`;
+      }).join('\n\n');
+
+      const emailSubject = `Konfirmasi E-Ticket Festival Monolog Lampung 2026 - [${booking.id}]`;
+      const emailBody = `Yth. ${booking.fullname},
+
+Berikut adalah rincian lengkap data registrasi penonton dan kode e-ticket resmi Anda:
+
+----------------------------------------------------------------------
+TABEL DATA PEMBELI & KONFIRMASI E-TICKET
+----------------------------------------------------------------------
+• Kode Booking                : ${booking.id}
+• Nama Lengkap Pemesan         : ${booking.fullname}
+• No. WhatsApp                : ${booking.whatsapp}
+• Email Penonton               : ${booking.email}
+• Instansi / Sekolah / Kampus : ${booking.institution || 'Umum'}
+• Asal Kota                  : ${booking.city}
+• Kategori Tiket             : ${categoryName}
+• Jumlah Tiket               : ${booking.ticketCount} Lembar
+• Status Pembayaran           : ${booking.status}
+
+----------------------------------------------------------------------
+RINCIAN KODE AKSES TIKET INDIVIDUAL (UNTUK CETAK E-TICKET)
+----------------------------------------------------------------------
+${ticketDetailsText}
+
+Tunjukkan QR Code E-Ticket ini saat memasuki Gate Registrasi Panggung Taman Budaya Lampung.
+
+Salam hangat,
+Panitia Festival Monolog Komunitas Kata Kita`;
+
+      addEmail(booking.email, emailSubject, emailBody, 'Sent');
+      addLog(operatorName || 'Admin', 'Kirim Email Manual', `Email konfirmasi E-Ticket berhasil dikirimkan ke ${booking.email} (Kode Booking: ${booking.id}).`);
+
+      res.json({ success: true, message: `Email konfirmasi e-ticket berhasil dikirim ke ${booking.email}` });
+    } catch (error: any) {
+      res.status(500).json({ error: 'Gagal mengirim email: ' + error.message });
+    }
+  });
+
+  // 6c. POST Bulk Send Email for All Lunas Bookings
+  app.post('/api/admin/emails/bulk-send', (req, res) => {
+    try {
+      const db = getDB();
+      const lunasBookings = db.bookings.filter((b: Booking) => b.status === 'Lunas');
+      let sentCount = 0;
+
+      for (const booking of lunasBookings) {
+        const categoryName = db.categories.find((c: any) => c.id === booking.categoryId)?.name || booking.categoryId;
+        const ticketDetailsText = booking.tickets.map((t: any) => {
+          return `• Nama Penonton: ${t.ownerName} | No Tiket: ${t.ticketNumber} | PIN: ${t.accessCode || 'N/A'}`;
+        }).join('\n');
+
+        const emailSubject = `Rincian E-Ticket Resmi Festival Monolog Lampung 2026 - [${booking.id}]`;
+        const emailBody = `Yth. ${booking.fullname},
+
+Berikut adalah rincian lengkap data registrasi penonton dan kode e-ticket resmi Anda:
+
+----------------------------------------------------------------------
+Rangkuman Registrasi
+----------------------------------------------------------------------
+• Kode Booking: ${booking.id}
+• Nama Pemesan: ${booking.fullname}
+• Sekolah/Kampus: ${booking.institution || 'Umum'}
+• Kategori: ${categoryName}
+• Jumlah Tiket: ${booking.ticketCount} Lembar
+• Status: LUNAS VERIFIKASI
+
+----------------------------------------------------------------------
+PIN Akses Cetak E-Ticket:
+----------------------------------------------------------------------
+${ticketDetailsText}
+
+Salam hangat,
+Panitia Festival Monolog Komunitas Kata Kita`;
+
+        addEmail(booking.email, emailSubject, emailBody, 'Sent');
+        sentCount++;
+      }
+
+      addLog('Super Admin', 'Kirim Email Massal', `Mengirimkan email konfirmasi e-ticket secara massal ke ${sentCount} pemesanan bertatus Lunas.`);
+      res.json({ success: true, count: sentCount, message: `Berhasil mengirim email massal ke ${sentCount} pemesanan Lunas.` });
+    } catch (error: any) {
+      res.status(500).json({ error: 'Gagal pengiriman email massal: ' + error.message });
     }
   });
 

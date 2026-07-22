@@ -26,8 +26,8 @@
     {
       "id": "cat-umum",
       "name": "Umum (Reguler)",
-      "price": 50000,
-      "quota": 150,
+      "price": 35000,
+      "quota": 50,
       "sold": 2,
       "description": "Rasakan kedalaman emosi, kritik sosial, dan pementasan monolog paling spektakuler di Lampung! Kategori ini terbuka untuk seluruh pecinta seni teater, alumni, praktisi seni, dan masyarakat umum. Bersiaplah terhanyut dalam karakter kuat dan tata panggung yang memukau!"
     },
@@ -35,7 +35,7 @@
       "id": "cat-pelajar",
       "name": "Pelajar / Mahasiswa",
       "price": 35000,
-      "quota": 350,
+      "quota": 450,
       "sold": 2,
       "description": "Dukungan penuh untuk kreativitas generasi muda! Penawaran khusus bagi pelajar aktif (SMP/SMA/Sederajat) & mahasiswa se-Provinsi Lampung. Jadilah saksi perjuangan seni peran sekolah jagoanmu secara langsung di atas panggung megah! *Wajib menunjukkan Kartu Identitas Pelajar/Mahasiswa aktif di lokasi.*"
     }

@@ -4,10 +4,12 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Ticket, ShieldAlert, Sparkles, RefreshCw, Layers, Mail, Phone, MapPin, ShieldCheck, Globe } from 'lucide-react';
+import { Ticket, ShieldAlert, Sparkles, RefreshCw, Layers, Mail, Phone, MapPin, ShieldCheck, Globe, BookOpen } from 'lucide-react';
 import { EventSettings, TicketCategory } from './types';
 import EventLanding from './components/EventLanding';
 import AdminHub from './components/AdminHub';
+import UserGuideModal from './components/UserGuideModal';
+import kataKitaLogo from './assets/images/kata_kita_logo_1784564549101.jpg';
 
 export interface Theme {
   id: string;
@@ -87,6 +89,7 @@ export const themes: Theme[] = [
 
 export default function App() {
   const [activePortal, setActivePortal] = useState<'public' | 'admin'>('public');
+  const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
   const [eventSettings, setEventSettings] = useState<EventSettings | null>(null);
   const [categories, setCategories] = useState<TicketCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -207,19 +210,23 @@ export default function App() {
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActivePortal('public')}>
             <div className="bg-indigo-100/90 border-2 border-indigo-200 rounded-xl px-2.5 py-1 flex items-center shadow-sm">
               <img
-                src="https://katakita-group.biz.id/uploads/komunitas-katakita.png"
+                src={kataKitaLogo}
                 alt="Komunitas Kata Kita Logo"
-                className="h-8 w-auto object-contain max-w-[120px]"
+                className="h-8 w-auto object-contain max-w-[120px] mix-blend-multiply"
                 referrerPolicy="no-referrer"
               />
             </div>
             <div>
-              <h1 className="font-black text-slate-900 text-base tracking-tight font-sans flex items-center gap-1">
-                Komunitas Kata Kita
+              <h1 className="font-black text-base tracking-tight font-sans flex items-center gap-1">
+                <span className="text-blue-700">Komunitas</span>
+                <span className="text-red-600">Kata</span>
+                <span className="text-amber-500">Kita</span>
                 <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
               </h1>
-              <p className="text-[10px] text-red-600 font-mono tracking-wider font-extrabold">
-                Sistem Tiket Festival Monolog
+              <p className="text-[10px] font-mono tracking-wider font-extrabold flex items-center gap-1">
+                <span className="text-slate-600">Sistem Tiket</span>
+                <span className="text-red-600 font-black">Festival</span>
+                <span className="text-amber-600 font-black">Monolog</span>
               </p>
             </div>
           </div>
@@ -250,6 +257,16 @@ export default function App() {
               Portal Panitia
             </button>
             
+            <button
+              onClick={() => setIsUserGuideOpen(true)}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 border border-amber-500/30 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm hover:-translate-y-0.5"
+              title="Buka Pedoman & Petunjuk Penggunaan (Bisa Diunduh)"
+              id="btn-pedoman-aplikasi"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-amber-600" />
+              <span className="hidden sm:inline font-extrabold">Pedoman Aplikasi</span>
+            </button>
+
             <button
               onClick={fetchConfig}
               className="p-1.5 bg-slate-100 text-slate-500 hover:text-red-600 hover:bg-red-50 border border-slate-200 rounded-lg shadow-sm hover:shadow-[0_0_15px_rgba(220,38,38,0.15)] transition-all duration-300 shrink-0 cursor-pointer hover:-translate-y-0.5"
@@ -291,7 +308,7 @@ export default function App() {
         ) : eventSettings && (
           <div className="flex-1 flex flex-col">
             {activePortal === 'public' ? (
-              <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-8 flex-1">
+              <div className="w-full px-4 md:px-8 py-8 flex-1">
                 <EventLanding
                   eventSettings={eventSettings}
                   categories={categories}
@@ -320,7 +337,7 @@ export default function App() {
               <div className="flex items-center gap-3">
                 <div className="bg-white border border-slate-200 rounded-xl px-2.5 py-1 flex items-center shadow-sm">
                   <img
-                    src="https://katakita-group.biz.id/uploads/komunitas-katakita.png"
+                    src={kataKitaLogo}
                     alt="Komunitas Kata Kita Logo"
                     className="h-6 w-auto object-contain"
                     referrerPolicy="no-referrer"
@@ -447,6 +464,12 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Global Pedoman Application Modal */}
+      <UserGuideModal 
+        isOpen={isUserGuideOpen} 
+        onClose={() => setIsUserGuideOpen(false)} 
+      />
 
     </div>
   );

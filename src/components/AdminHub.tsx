@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users, CheckCircle2, AlertCircle, XCircle, Search, Filter, Trash2, Eye, 
   Settings, Database, FileText, Mail, LogOut, Check, X, ShieldAlert, 
-  Plus, HelpCircle, Save, RotateCcw, Camera, Download, RefreshCw, Smartphone
+  Plus, HelpCircle, Save, RotateCcw, Camera, Download, RefreshCw, Smartphone, Building2, Lock
 } from 'lucide-react';
 import { Booking, TicketCategory, EventSettings, ActivityLog, EmailLog, AdminUser, IndividualTicket } from '../types';
 import QRCodeScanner from './QRCodeScanner';
@@ -39,12 +39,15 @@ export default function AdminHub({ eventSettings, categories, onRefreshAll }: Ad
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Semua');
   const [categoryFilter, setCategoryFilter] = useState('Semua');
+  const [schoolFilter, setSchoolFilter] = useState('Semua');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
   // Selected Booking details modal
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedEmailPreview, setSelectedEmailPreview] = useState<EmailLog | null>(null);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -133,8 +136,8 @@ export default function AdminHub({ eventSettings, categories, onRefreshAll }: Ad
     setIsAdminLoggedIn(false);
   };
 
-  // Approve / Reject handler
-  const handleVerifyBooking = async (bookingId: string, action: 'approve' | 'reject') => {
+  // Approve / Reject / Reset handler
+  const handleVerifyBooking = async (bookingId: string, action: 'approve' | 'reject' | 'reset_pending') => {
     if (action === 'reject' && !rejectReason.trim()) {
       alert('Harap masukkan alasan penolakan tiket.');
       return;
@@ -163,7 +166,13 @@ export default function AdminHub({ eventSettings, categories, onRefreshAll }: Ad
         setSelectedBooking(null);
         setRejectReason('');
         setAdminNotes('');
-        alert(action === 'approve' ? 'Pemesanan berhasil disetujui!' : 'Pemesanan berhasil ditolak.');
+        alert(
+          action === 'approve' 
+            ? 'Pemesanan berhasil disetujui (Lunas)!' 
+            : action === 'reject' 
+              ? 'Pemesanan berhasil ditolak.' 
+              : 'Status pemesanan dikembalikan ke Menunggu Verifikasi.'
+        );
       } else {
         alert('Gagal memverifikasi: ' + (data.error || 'Unknown error'));
       }
@@ -243,13 +252,81 @@ export default function AdminHub({ eventSettings, categories, onRefreshAll }: Ad
     }
   };
 
-  // Export Table to CSV
+  // Trigger direct email resend to a participant
+  const handleResendEmail = async (bookingId: string) => {
+    try {
+      setActionLoading(true);
+      const res = await fetch('/api/admin/emails/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId, operatorName: adminUser?.name || 'Admin' })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || 'Email konfirmasi e-ticket berhasil dikirim ke penonton!');
+        fetchAdminData();
+      } else {
+        alert(data.error || 'Gagal mengirim email.');
+      }
+    } catch (err: any) {
+      alert('Terjadi kesalahan saat mengirim email: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Bulk Send Email for all Lunas bookings
+  const handleBulkSendEmail = async () => {
+    if (!confirm('Apakah Anda yakin ingin mengirimkan ulang email konfirmasi e-ticket secara massal ke SELURUH penonton bertatus LUNAS?')) return;
+    try {
+      setActionLoading(true);
+      const res = await fetch('/api/admin/emails/bulk-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`Berhasil! ${data.count} email konfirmasi e-ticket telah dikirim ke penonton bertatus Lunas.`);
+        fetchAdminData();
+      } else {
+        alert(data.error || 'Gagal pengiriman email massal.');
+      }
+    } catch (err: any) {
+      alert('Terjadi kesalahan: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Export Filtered Table to CSV
   const handleExportCSV = () => {
-    if (bookings.length === 0) return;
-    const headers = ['Kode Booking', 'Nama Lengkap', 'WhatsApp', 'Email', 'Kota', 'Instansi', 'Kategori', 'Jumlah Tiket', 'Tanggal Pemesanan', 'Status Pembayaran', 'Metode Pembayaran', 'Detail Nomor Tiket'];
-    const rows = bookings.map(b => {
+    const dataToExport = filteredBookings.length > 0 ? filteredBookings : bookings;
+    if (dataToExport.length === 0) {
+      alert('Tidak ada data pembeli yang sesuai dengan kriteria filter.');
+      return;
+    }
+
+    const headers = [
+      'Kode Booking',
+      'Nama Lengkap Pemesan',
+      'No. WhatsApp',
+      'Email',
+      'Kota',
+      'Instansi / Sekolah / Kampus',
+      'Kategori Tiket',
+      'Jumlah Tiket',
+      'Tanggal Pemesanan',
+      'Status Pembayaran',
+      'Metode Pembayaran',
+      'Detail Nomor Tiket & Kode PIN Akses'
+    ];
+
+    const rows = dataToExport.map(b => {
       const categoryName = categories.find(c => c.id === b.categoryId)?.name || b.categoryId;
-      const ticketNumbers = b.tickets.map(t => `${t.ticketNumber} (${t.ownerName})`).join(' | ');
+      const ticketDetails = b.tickets
+        .map(t => `${t.ticketNumber} (${t.ownerName}) [PIN: ${t.accessCode || 'N/A'}]`)
+        .join(' | ');
+
       return [
         b.id,
         b.fullname,
@@ -261,8 +338,8 @@ export default function AdminHub({ eventSettings, categories, onRefreshAll }: Ad
         b.ticketCount,
         new Date(b.bookingDate).toLocaleDateString('id-ID'),
         b.status,
-        b.paymentMethod,
-        ticketNumbers
+        b.paymentMethod === 'transfer' ? 'Transfer Bank' : 'Offline',
+        ticketDetails
       ];
     });
 
@@ -270,11 +347,18 @@ export default function AdminHub({ eventSettings, categories, onRefreshAll }: Ad
       .map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
       .join('\n');
 
+    let filterTag = '';
+    if (schoolFilter !== 'Semua') filterTag += `_${schoolFilter.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    if (categoryFilter !== 'Semua') filterTag += `_${categoryFilter}`;
+    if (statusFilter !== 'Semua') filterTag += `_${statusFilter.replace(/\s+/g, '')}`;
+
+    const filename = `Laporan_Data_Pembeli_Festival_Monolog${filterTag || '_Semua'}_${new Date().toISOString().split('T')[0]}.csv`;
+
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `Laporan_Pemesanan_Festival_Monolog_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', filename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -304,13 +388,61 @@ export default function AdminHub({ eventSettings, categories, onRefreshAll }: Ad
     .filter(b => b.status === 'Lunas')
     .reduce((sum, b) => sum + b.ticketCount, 0);
 
-  // Filter Bookings
+  // Compute stats per school / institution
+  const schoolCounts = useMemo(() => {
+    const map: Record<string, { totalTickets: number; totalBookings: number; lunasTickets: number; pendingTickets: number }> = {};
+    
+    bookings.forEach(b => {
+      const rawInst = b.institution && b.institution.trim() ? b.institution.trim() : 'Umum';
+      if (!map[rawInst]) {
+        map[rawInst] = { totalTickets: 0, totalBookings: 0, lunasTickets: 0, pendingTickets: 0 };
+      }
+      map[rawInst].totalBookings += 1;
+      map[rawInst].totalTickets += b.ticketCount;
+      if (b.status === 'Lunas') {
+        map[rawInst].lunasTickets += b.ticketCount;
+      } else if (b.status === 'Menunggu Verifikasi') {
+        map[rawInst].pendingTickets += b.ticketCount;
+      }
+    });
+
+    return Object.entries(map)
+      .map(([school, stats]) => ({ school, ...stats }))
+      .sort((a, b) => b.totalTickets - a.totalTickets);
+  }, [bookings]);
+
+  // Compute category breakdown
+  const categoryBreakdown = useMemo(() => {
+    const pelajarBookings = bookings.filter(b => b.categoryId === 'cat-pelajar');
+    const umumBookings = bookings.filter(b => b.categoryId === 'cat-umum');
+
+    const totalPelajarTickets = pelajarBookings.reduce((sum, b) => sum + b.ticketCount, 0);
+    const totalUmumTickets = umumBookings.reduce((sum, b) => sum + b.ticketCount, 0);
+    const grandTotalTickets = totalPelajarTickets + totalUmumTickets;
+
+    return {
+      pelajar: {
+        bookingsCount: pelajarBookings.length,
+        ticketsCount: totalPelajarTickets,
+        percentage: grandTotalTickets > 0 ? Math.round((totalPelajarTickets / grandTotalTickets) * 100) : 0
+      },
+      umum: {
+        bookingsCount: umumBookings.length,
+        ticketsCount: totalUmumTickets,
+        percentage: grandTotalTickets > 0 ? Math.round((totalUmumTickets / grandTotalTickets) * 100) : 0
+      },
+      grandTotal: grandTotalTickets
+    };
+  }, [bookings]);
+
+  // Filter Bookings with School/Institution support
   const filteredBookings = bookings.filter(b => {
     const matchesSearch = 
       b.fullname.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.whatsapp.includes(searchQuery) ||
       b.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (b.institution && b.institution.toLowerCase().includes(searchQuery.toLowerCase())) ||
       b.tickets.some(t => 
         t.ticketNumber.toLowerCase().includes(searchQuery.toLowerCase()) || 
         t.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -320,7 +452,16 @@ export default function AdminHub({ eventSettings, categories, onRefreshAll }: Ad
     const matchesStatus = statusFilter === 'Semua' || b.status === statusFilter;
     const matchesCategory = categoryFilter === 'Semua' || b.categoryId === categoryFilter;
 
-    return matchesSearch && matchesStatus && matchesCategory;
+    let matchesSchool = true;
+    if (schoolFilter !== 'Semua') {
+      if (schoolFilter === 'Umum') {
+        matchesSchool = !b.institution || b.institution.toLowerCase() === 'umum' || b.institution.toLowerCase() === 'masyarakat umum';
+      } else {
+        matchesSchool = Boolean(b.institution && b.institution.toLowerCase().includes(schoolFilter.toLowerCase()));
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesCategory && matchesSchool;
   });
 
   // Paginate Bookings
@@ -553,24 +694,15 @@ function sendEmailNotification(email, name, bookingId, status, reason) {
               </button>
             </form>
 
-            <div className="mt-8 border-t border-slate-100 pt-4 text-center">
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-mono font-bold mb-2">Informasi Akses Cepat</p>
-              <div className="grid grid-cols-3 gap-1.5 text-[9px] text-slate-600 font-mono font-medium">
-                <div className="bg-slate-50 p-2 rounded border border-slate-200">
-                  <p className="font-black text-red-600">Super Admin</p>
-                  <p>admin</p>
-                  <p className="text-[8px] text-slate-500">adminkata123</p>
+            <div className="mt-6 border-t border-slate-200/80 pt-4">
+              <div className="bg-slate-100/90 border border-slate-200/90 rounded-xl p-3.5 space-y-1.5 text-left">
+                <div className="flex items-center gap-2 text-slate-800 font-bold text-xs">
+                  <Lock className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span>Akses Otentikasi Khusus Panitia</span>
                 </div>
-                <div className="bg-slate-50 p-2 rounded border border-slate-200">
-                  <p className="font-black text-indigo-600">Verifikator</p>
-                  <p>verifikator</p>
-                  <p className="text-[8px] text-slate-500">verif123</p>
-                </div>
-                <div className="bg-slate-50 p-2 rounded border border-slate-200">
-                  <p className="font-black text-emerald-600">Gate Staff</p>
-                  <p>gatestaff</p>
-                  <p className="text-[8px] text-slate-500">gate123</p>
-                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed font-sans">
+                  Silakan masuk menggunakan username & password resmi yang Anda miliki sesuai hak akses peran sebagai <strong>Super Admin</strong>, <strong>Verifikator</strong>, atau <strong>Gate Staff</strong>.
+                </p>
               </div>
             </div>
           </div>
@@ -875,6 +1007,148 @@ function sendEmailNotification(email, name, bookingId, status, reason) {
                     </div>
                   </div>
                 </div>
+
+                {/* Demographic & Specific School Breakdown Reports */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
+                  
+                  {/* Left: Category Distribution (Pelajar vs Umum) */}
+                  <div className="lg:col-span-4 bg-gradient-to-br from-indigo-50/90 to-white/95 border-2 border-indigo-200 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-extrabold text-slate-800 text-base font-sans flex items-center gap-2">
+                          <Users className="w-5 h-5 text-indigo-600" />
+                          Distribusi Kategori Penonton
+                        </h3>
+                        <span className="bg-indigo-100 text-indigo-700 font-mono font-black text-[10px] px-2 py-0.5 rounded-md border border-indigo-200">
+                          {categoryBreakdown.grandTotal} Tiket
+                        </span>
+                      </div>
+
+                      <div className="space-y-4">
+                        {/* Pelajar / Mahasiswa */}
+                        <div className="bg-white p-3.5 rounded-xl border border-indigo-100 shadow-sm space-y-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-extrabold text-slate-800 flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                              Pelajar / Mahasiswa
+                            </span>
+                            <span className="font-mono font-black text-amber-700">
+                              {categoryBreakdown.pelajar.ticketsCount} Tiket ({categoryBreakdown.pelajar.percentage}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-100 rounded-full h-2">
+                            <div
+                              className="bg-amber-500 h-2 rounded-full transition-all duration-500"
+                              style={{ width: `${categoryBreakdown.pelajar.percentage}%` }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-slate-500 font-medium">
+                            {categoryBreakdown.pelajar.bookingsCount} Transaksi pemesanan aktif
+                          </p>
+                        </div>
+
+                        {/* Umum */}
+                        <div className="bg-white p-3.5 rounded-xl border border-indigo-100 shadow-sm space-y-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-extrabold text-slate-800 flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                              Masyarakat Umum
+                            </span>
+                            <span className="font-mono font-black text-emerald-700">
+                              {categoryBreakdown.umum.ticketsCount} Tiket ({categoryBreakdown.umum.percentage}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-100 rounded-full h-2">
+                            <div
+                              className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
+                              style={{ width: `${categoryBreakdown.umum.percentage}%` }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-slate-500 font-medium">
+                            {categoryBreakdown.umum.bookingsCount} Transaksi pemesanan aktif
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 font-medium leading-relaxed">
+                      Laporan otomatis diperbarui setiap kali ada pendaftaran baru atau perubahan status persetujuan tiket.
+                    </div>
+                  </div>
+
+                  {/* Right: Specific School / Campus Audience Table */}
+                  <div className="lg:col-span-8 bg-gradient-to-br from-slate-50/90 to-white/95 border-2 border-slate-200 rounded-2xl p-5 shadow-xl">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+                      <div>
+                        <h3 className="font-extrabold text-slate-800 text-base font-sans flex items-center gap-2">
+                          <Building2 className="w-5 h-5 text-amber-600" />
+                          Laporan Spesifik Penonton per Sekolah / Kampus
+                        </h3>
+                        <p className="text-slate-500 text-xs mt-0.5 font-semibold">
+                          Lacak jumlah penonton dari masing-masing sekolah, kampus, dan instansi secara detail.
+                        </p>
+                      </div>
+                      <span className="bg-amber-100 text-amber-800 border border-amber-300 font-mono font-black text-xs px-3 py-1 rounded-xl shrink-0">
+                        {schoolCounts.length} Sekolah/Instansi
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-100 text-slate-600 border-b border-slate-200 font-mono uppercase text-[9.5px] tracking-wider">
+                            <th className="py-3 px-3.5 font-black">Sekolah / Kampus / Instansi</th>
+                            <th className="py-3 px-3.5 font-black text-center">Total Tiket</th>
+                            <th className="py-3 px-3.5 font-black text-center">Pemesanan</th>
+                            <th className="py-3 px-3.5 font-black text-center">Status Lunas</th>
+                            <th className="py-3 px-3.5 font-black text-center">Aksi Filter</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {schoolCounts.map((s, idx) => (
+                            <tr key={idx} className="hover:bg-amber-50/40 transition">
+                              <td className="py-3 px-3.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-md bg-amber-100 text-amber-800 font-mono font-bold text-[10px] flex items-center justify-center shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="font-extrabold text-slate-900 text-xs">
+                                    {s.school}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-3.5 text-center font-mono font-black text-amber-700 text-sm">
+                                {s.totalTickets} tkt
+                              </td>
+                              <td className="py-3 px-3.5 text-center font-mono font-semibold text-slate-600">
+                                {s.totalBookings}x
+                              </td>
+                              <td className="py-3 px-3.5 text-center">
+                                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded text-[10px] font-black font-mono">
+                                  {s.lunasTickets} Lunas
+                                </span>
+                              </td>
+                              <td className="py-3 px-3.5 text-center">
+                                <button
+                                  onClick={() => {
+                                    setSchoolFilter(s.school);
+                                    setActiveTab('pembeli');
+                                    setCurrentPage(1);
+                                  }}
+                                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-2.5 py-1 rounded-lg transition cursor-pointer"
+                                  title={`Filter data pembeli dari ${s.school}`}
+                                >
+                                  Lihat Pembeli →
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                </div>
               </div>
             )}
 
@@ -884,7 +1158,7 @@ function sendEmailNotification(email, name, bookingId, status, reason) {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
                     <h2 className="text-xl md:text-2xl font-black text-slate-900 font-sans uppercase tracking-tight">Manajemen Data Pembeli</h2>
-                    <p className="text-slate-600 text-xs mt-1 font-semibold">Kelola pendaftaran, review bukti pembayaran, dan ekspor laporan.</p>
+                    <p className="text-slate-600 text-xs mt-1 font-semibold">Kelola pendaftaran, review bukti pembayaran, kirim email konfirmasi, dan ekspor laporan.</p>
                   </div>
                   <button
                     onClick={handleExportCSV}
@@ -894,6 +1168,44 @@ function sendEmailNotification(email, name, bookingId, status, reason) {
                     <Download className="w-4 h-4" />
                     Ekspor CSV (Excel)
                   </button>
+                </div>
+
+                {/* School Quick Filter Buttons Bar */}
+                <div className="bg-white border-2 border-indigo-100 p-3.5 rounded-2xl shadow-sm space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-extrabold text-slate-800 flex items-center gap-1.5 uppercase font-mono tracking-wider text-[10px]">
+                      <Building2 className="w-4 h-4 text-amber-500" />
+                      Filter Cepat Berdasarkan Sekolah / Kampus / Instansi:
+                    </span>
+                    {schoolFilter !== 'Semua' && (
+                      <button
+                        onClick={() => { setSchoolFilter('Semua'); setCurrentPage(1); }}
+                        className="text-[10px] font-extrabold text-rose-600 hover:underline cursor-pointer"
+                      >
+                        Reset Filter Sekolah (Tampilkan Semua)
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      onClick={() => { setSchoolFilter('Semua'); setCurrentPage(1); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer border ${schoolFilter === 'Semua' ? 'bg-amber-500 text-white border-amber-600 shadow-sm' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'}`}
+                    >
+                      Semua Sekolah ({bookings.length})
+                    </button>
+                    {schoolCounts.map((s, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => { setSchoolFilter(s.school); setCurrentPage(1); }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border flex items-center gap-1.5 ${schoolFilter === s.school ? 'bg-indigo-600 text-white border-indigo-700 shadow-sm' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'}`}
+                      >
+                        <span>{s.school}</span>
+                        <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-md font-mono ${schoolFilter === s.school ? 'bg-indigo-800 text-indigo-100' : 'bg-amber-100 text-amber-800'}`}>
+                          {s.totalTickets} tkt
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Filters and Search toolbar */}
@@ -908,7 +1220,7 @@ function sendEmailNotification(email, name, bookingId, status, reason) {
                         setSearchQuery(e.target.value);
                         setCurrentPage(1);
                       }}
-                      placeholder="Cari Nama Pembeli, Email, Kode Booking, Nomor Tiket..."
+                      placeholder="Cari Nama Pembeli, Sekolah, Email, Kode Booking, Nomor Tiket..."
                       className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500/60 focus:bg-white text-xs font-bold transition"
                     />
                   </div>
@@ -1047,23 +1359,32 @@ function sendEmailNotification(email, name, bookingId, status, reason) {
                                   )}
                                 </td>
                                 <td className="py-4.5 px-4">
-                                  <div className="flex justify-center items-center gap-2">
+                                  <div className="flex justify-center items-center gap-1.5">
                                     <button
                                       onClick={() => {
                                         setSelectedBooking(b);
                                         setIsDetailModalOpen(true);
                                       }}
-                                      className="p-1.5 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 rounded transition cursor-pointer"
+                                      className="p-1.5 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 border border-indigo-500/20 rounded transition cursor-pointer"
                                       title="Review Detail Pembeli"
                                       id={`btn-review-${b.id}`}
                                     >
                                       <Eye className="w-3.5 h-3.5" />
                                     </button>
+
+                                    <button
+                                      onClick={() => handleResendEmail(b.id)}
+                                      className="p-1.5 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/20 rounded transition cursor-pointer"
+                                      title="Kirim / Kirim Ulang Email Konfirmasi E-Ticket"
+                                      id={`btn-mail-${b.id}`}
+                                    >
+                                      <Mail className="w-3.5 h-3.5" />
+                                    </button>
                                     
                                     {adminUser?.role === 'Super Admin' && (
                                       <button
                                         onClick={() => handleDeleteBooking(b.id)}
-                                        className="p-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 rounded transition cursor-pointer"
+                                        className="p-1.5 bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 border border-rose-500/20 rounded transition cursor-pointer"
                                         title="Hapus Pemesanan"
                                         id={`btn-delete-${b.id}`}
                                       >
@@ -1458,53 +1779,150 @@ function sendEmailNotification(email, name, bookingId, status, reason) {
             {/* TAB 7: EMAILS LOG */}
             {activeTab === 'emails' && adminUser?.role === 'Super Admin' && (
               <div className="space-y-6">
-                <div>
-                  <h2 className="text-xl md:text-2xl font-black text-slate-900 font-sans uppercase tracking-tight">Notifikasi Email Otomatis</h2>
-                  <p className="text-slate-600 text-xs mt-1 font-semibold">Histori antrian email persetujuan/penolakan tiket yang berhasil dikirim ke penonton secara otomatis.</p>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <h2 className="text-xl md:text-2xl font-black text-slate-900 font-sans uppercase tracking-tight">Pusat Notifikasi Email Terkirim</h2>
+                    <p className="text-slate-600 text-xs mt-1 font-semibold">
+                      Histori dan antrian email e-ticket otomatis yang terkirim ke penonton beserta kode booking dan PIN tiket.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleBulkSendEmail}
+                    disabled={actionLoading}
+                    className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 text-white font-black text-xs px-4 py-2.5 rounded-xl border border-indigo-600/20 transition cursor-pointer shadow-md shadow-indigo-500/10"
+                    id="btn-bulk-send-emails"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Kirim Email Massal Penonton Lunas
+                  </button>
                 </div>
 
                 <div className="bg-white border-2 border-indigo-200 rounded-2xl overflow-hidden shadow-lg">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-slate-100 text-slate-600 border-b border-slate-200 font-mono uppercase text-[9px] tracking-wider">
-                          <th className="py-3.5 px-4">Waktu</th>
-                          <th className="py-3.5 px-4">Penerima</th>
-                          <th className="py-3.5 px-4">Subjek Email</th>
-                          <th className="py-3.5 px-4">Isi Notifikasi</th>
-                          <th className="py-3.5 px-4 text-center">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-slate-700">
-                        {emails.map(eml => (
-                          <tr key={eml.id} className="hover:bg-slate-50/50 transition">
-                            <td className="py-3.5 px-4 font-mono text-slate-500 text-[10px] font-semibold shrink-0">
-                              {new Date(eml.timestamp).toLocaleString('id-ID')}
-                            </td>
-                            <td className="py-3.5 px-4 font-extrabold text-slate-900">
-                              {eml.recipient}
-                            </td>
-                            <td className="py-3.5 px-4 font-bold text-slate-800">
-                              {eml.subject}
-                            </td>
-                            <td className="py-3.5 px-4 text-slate-600 font-semibold truncate max-w-xs" title={eml.body}>
-                              {eml.body}
-                            </td>
-                            <td className="py-3.5 px-4 text-center">
-                              <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-lg text-[10px] font-black font-mono">
-                                Sent
-                              </span>
-                            </td>
+                  {emails.length === 0 ? (
+                    <div className="text-center py-16 text-slate-500 font-medium text-xs">
+                      Belum ada log email terkirim dalam sistem.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-100 text-slate-600 border-b border-slate-200 font-mono uppercase text-[9px] tracking-wider">
+                            <th className="py-3.5 px-4">Waktu Terkirim</th>
+                            <th className="py-3.5 px-4">Penerima Email</th>
+                            <th className="py-3.5 px-4">Subjek Pesan</th>
+                            <th className="py-3.5 px-4">Ringkasan Tabel Data</th>
+                            <th className="py-3.5 px-4 text-center">Status</th>
+                            <th className="py-3.5 px-4 text-center">Aksi Detail</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-slate-700">
+                          {emails.map(eml => (
+                            <tr key={eml.id} className="hover:bg-amber-50/30 transition">
+                              <td className="py-3.5 px-4 font-mono text-slate-500 text-[10px] font-semibold shrink-0">
+                                {new Date(eml.timestamp).toLocaleString('id-ID')}
+                              </td>
+                              <td className="py-3.5 px-4 font-extrabold text-slate-900">
+                                {eml.recipient}
+                              </td>
+                              <td className="py-3.5 px-4 font-bold text-slate-800">
+                                {eml.subject}
+                              </td>
+                              <td className="py-3.5 px-4 text-slate-600 font-mono text-[10px] truncate max-w-xs" title={eml.body}>
+                                {eml.body.substring(0, 80)}...
+                              </td>
+                              <td className="py-3.5 px-4 text-center">
+                                <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-lg text-[10px] font-black font-mono">
+                                  Terkirim (Sent)
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 text-center">
+                                <button
+                                  onClick={() => {
+                                    setSelectedEmailPreview(eml);
+                                    setIsEmailModalOpen(true);
+                                  }}
+                                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold px-2.5 py-1 rounded-lg text-[10px] transition cursor-pointer"
+                                >
+                                  Preview Email →
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
           </main>
+        </div>
+      )}
+
+      {/* EMAIL PREVIEW MODAL */}
+      {isEmailModalOpen && selectedEmailPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md" id="email-preview-modal">
+          <div className="w-full max-w-2xl bg-white border-2 border-indigo-200 rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-zoomIn">
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-amber-400" />
+                <div>
+                  <h3 className="font-extrabold text-sm uppercase tracking-tight">Detail Content Email Terkirim</h3>
+                  <p className="text-[10px] text-slate-400 font-mono">Kepada: {selectedEmailPreview.recipient}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setIsEmailModalOpen(false);
+                  setSelectedEmailPreview(null);
+                }}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4 font-sans text-xs">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+                <div className="grid grid-cols-3 gap-2 border-b border-slate-200 pb-2">
+                  <span className="text-slate-500 font-mono text-[10px] uppercase font-bold">Waktu Pengiriman</span>
+                  <span className="col-span-2 font-mono font-bold text-slate-800">
+                    {new Date(selectedEmailPreview.timestamp).toLocaleString('id-ID')}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 border-b border-slate-200 pb-2">
+                  <span className="text-slate-500 font-mono text-[10px] uppercase font-bold">Alamat Penerima</span>
+                  <span className="col-span-2 font-bold text-indigo-700">{selectedEmailPreview.recipient}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <span className="text-slate-500 font-mono text-[10px] uppercase font-bold">Subjek Email</span>
+                  <span className="col-span-2 font-extrabold text-slate-900">{selectedEmailPreview.subject}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-black text-slate-800 text-xs uppercase tracking-wider font-mono">
+                  Isi Notifikasi Email (Format Rapi Peserta):
+                </h4>
+                <div className="bg-slate-900 text-amber-200 font-mono text-xs p-4 rounded-2xl whitespace-pre-wrap leading-relaxed border border-slate-800 shadow-inner">
+                  {selectedEmailPreview.body}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-100 border-t border-slate-200 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setIsEmailModalOpen(false);
+                  setSelectedEmailPreview(null);
+                }}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl text-xs transition cursor-pointer"
+              >
+                Tutup Preview
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1673,15 +2091,21 @@ function sendEmailNotification(email, name, bookingId, status, reason) {
 
               {/* Form Actions (Approve / Reject Workspace) */}
               {selectedBooking.status === 'Menunggu Verifikasi' && (
-                <div className="border-t border-slate-100 pt-4 space-y-4">
-                  <h4 className="font-black text-amber-600 text-xs uppercase tracking-wider font-sans">
-                    Langkah Verifikasi Panitia
-                  </h4>
+                <div className="border-t border-slate-200 pt-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-black text-amber-600 text-xs uppercase tracking-wider font-sans flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-amber-500" />
+                      Langkah Verifikasi Panitia Verifikator
+                    </h4>
+                    <span className="bg-indigo-100 text-indigo-700 font-mono font-extrabold text-[10px] px-2.5 py-0.5 rounded-full border border-indigo-200">
+                      Menunggu Keputusan Verifikator
+                    </span>
+                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Rejection Cause input */}
                     <div className="space-y-1.5">
-                      <label className="block text-slate-500 font-bold">Alasan Penolakan (Hanya jika memilih Tolak Tiket)</label>
+                      <label className="block text-slate-500 font-bold">Alasan Penolakan (Wajib Diisi Jika Klik Tolak)</label>
                       <textarea
                         rows={2}
                         value={rejectReason}
@@ -1693,23 +2117,23 @@ function sendEmailNotification(email, name, bookingId, status, reason) {
 
                     {/* Admin internal logs note */}
                     <div className="space-y-1.5">
-                      <label className="block text-slate-500 font-bold">Catatan Admin Internal (Opsional)</label>
+                      <label className="block text-slate-500 font-bold">Catatan Internal Panitia (Opsional)</label>
                       <textarea
                         rows={2}
                         value={adminNotes}
                         onChange={(e) => setAdminNotes(e.target.value)}
-                        placeholder="Catatan tambahan internal panitia..."
+                        placeholder="Catatan tambahan internal..."
                         className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-amber-500 focus:bg-white font-bold transition resize-none leading-relaxed"
                       />
                     </div>
                   </div>
 
                   {/* Actions Buttons Row */}
-                  <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+                  <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2 border-t border-slate-100">
                     <button
                       onClick={() => handleVerifyBooking(selectedBooking.id, 'reject')}
                       disabled={actionLoading}
-                      className="flex items-center gap-1.5 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 disabled:opacity-50 text-white font-black px-4 py-2.5 rounded-xl transition text-xs cursor-pointer shadow-sm"
+                      className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 disabled:opacity-50 text-white font-black px-4 py-2.5 rounded-xl transition text-xs cursor-pointer shadow-sm"
                       id="btn-verify-reject"
                     >
                       <X className="w-4 h-4" />
@@ -1718,12 +2142,109 @@ function sendEmailNotification(email, name, bookingId, status, reason) {
                     <button
                       onClick={() => handleVerifyBooking(selectedBooking.id, 'approve')}
                       disabled={actionLoading}
-                      className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 text-white font-black px-5 py-2.5 rounded-xl transition text-xs cursor-pointer shadow-md"
+                      className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 text-white font-black px-5 py-2.5 rounded-xl transition text-xs cursor-pointer shadow-md"
                       id="btn-verify-approve"
                     >
                       <Check className="w-4 h-4" />
-                      Approve & Kirim E-Ticket
+                      Approve (Setuju & Kirim E-Ticket)
                     </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Status Lunas / Terverifikasi View & Correction Panel */}
+              {selectedBooking.status === 'Lunas' && (
+                <div className="border-t border-slate-200 pt-4 space-y-4">
+                  <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <span className="text-emerald-800 font-extrabold flex items-center gap-2 text-xs">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                      Status Keputusan: TIKET DISUTUJI (LUNAS & TERVERIFIKASI)
+                    </span>
+                    <button
+                      onClick={() => handleResendEmail(selectedBooking.id)}
+                      disabled={actionLoading}
+                      className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black px-3.5 py-2 rounded-xl transition text-xs cursor-pointer shadow-sm shrink-0"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      Kirim Ulang Email E-Ticket
+                    </button>
+                  </div>
+
+                  {/* Panel Koreksi bila verifikator salah klik */}
+                  <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-2">
+                    <p className="font-extrabold text-slate-800 text-[11px] flex items-center gap-1.5">
+                      <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
+                      Koreksi / Edit Keputusan Verifikator (Jika Salah Klik):
+                    </p>
+                    <p className="text-[10px] text-slate-500 font-medium">
+                      Jika Anda tidak sengaja menyetujui pemesanan ini, Anda dapat merestart status kembali ke peninjauan atau membatalkannya.
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        onClick={() => handleVerifyBooking(selectedBooking.id, 'reset_pending')}
+                        disabled={actionLoading}
+                        className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-black text-[11px] rounded-xl transition cursor-pointer"
+                      >
+                        ↩ Kembalikan ke "Menunggu Verifikasi"
+                      </button>
+                      <button
+                        onClick={() => {
+                          const reason = prompt('Masukkan alasan pembatalan/penolakan tiket:', 'Bukti pembayaran tidak sah setelah ditinjau ulang.');
+                          if (reason !== null) {
+                            setRejectReason(reason);
+                            handleVerifyBooking(selectedBooking.id, 'reject');
+                          }
+                        }}
+                        disabled={actionLoading}
+                        className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-900 border border-rose-300 font-black text-[11px] rounded-xl transition cursor-pointer"
+                      >
+                        ✕ Ubah Keputusan Jadi "DITOLAK"
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Status Ditolak View & Correction Panel */}
+              {selectedBooking.status === 'Ditolak' && (
+                <div className="border-t border-slate-200 pt-4 space-y-4">
+                  <div className="bg-rose-50 border border-rose-200 p-3.5 rounded-2xl space-y-1">
+                    <span className="text-rose-800 font-extrabold flex items-center gap-2 text-xs">
+                      <XCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                      Status Keputusan: PENGAJUAN DITOLAK
+                    </span>
+                    {selectedBooking.rejectReason && (
+                      <p className="text-[11px] text-rose-700 font-semibold pl-7">
+                        Alasan Penolakan: "{selectedBooking.rejectReason}"
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Panel Koreksi bila verifikator salah klik */}
+                  <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-2">
+                    <p className="font-extrabold text-slate-800 text-[11px] flex items-center gap-1.5">
+                      <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
+                      Koreksi / Edit Keputusan Verifikator (Jika Salah Klik):
+                    </p>
+                    <p className="text-[10px] text-slate-500 font-medium">
+                      Jika Anda tidak sengaja menolak pemesanan ini, Anda dapat langsung menyetujuinya atau mengembalikannya ke antrean verifikasi.
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        onClick={() => handleVerifyBooking(selectedBooking.id, 'approve')}
+                        disabled={actionLoading}
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] rounded-xl transition cursor-pointer shadow-sm"
+                      >
+                        ✓ Ubah Keputusan Jadi "APPROVE (LUNAS)"
+                      </button>
+                      <button
+                        onClick={() => handleVerifyBooking(selectedBooking.id, 'reset_pending')}
+                        disabled={actionLoading}
+                        className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-black text-[11px] rounded-xl transition cursor-pointer"
+                      >
+                        ↩ Kembalikan ke "Menunggu Verifikasi"
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
