@@ -12,17 +12,26 @@ import {
 } from 'lucide-react';
 import { TicketCategory, EventSettings, Booking, IndividualTicket } from '../types';
 import TicketCard from './TicketCard';
+import QrisCard from './QrisCard';
+import LineupSection, { PerformerShow, FESTIVAL_PERFORMERS } from './LineupSection';
 import festivalMonologLogo from '../assets/images/festival_monolog_logo_1784564565784.jpg';
 import kataKitaLogo from '../assets/images/kata_kita_logo_1784564549101.jpg';
 import monologHeroIllustration from '../assets/images/monolog_hero_illustration_1784650163715.jpg';
 
 export const BANDAR_LAMPUNG_INSTITUTIONS = [
-  // SMA Negeri di Bandar Lampung (SMAN 1 s/d SMAN 17)
-  'SMAN 1 Bandar Lampung',
+  // --- Sekolah Peserta Utama Festival Monolog 2026 ---
+  'SMKN 5 Bandar Lampung',
+  'SMKN 4 Bandar Lampung',
   'SMAN 2 Bandar Lampung',
+  'SMKN 1 Negeri Agung',
+  'SMAN 1 Sukadana',
+  'SMAN 5 Bandar Lampung',
+  'SMAN 1 Punggur',
+
+  // --- SMA Negeri di Bandar Lampung (SMAN 1 s/d SMAN 17) ---
+  'SMAN 1 Bandar Lampung',
   'SMAN 3 Bandar Lampung',
   'SMAN 4 Bandar Lampung',
-  'SMAN 5 Bandar Lampung',
   'SMAN 6 Bandar Lampung',
   'SMAN 7 Bandar Lampung',
   'SMAN 8 Bandar Lampung',
@@ -36,12 +45,10 @@ export const BANDAR_LAMPUNG_INSTITUTIONS = [
   'SMAN 16 Bandar Lampung',
   'SMAN 17 Bandar Lampung',
   
-  // SMK Negeri di Bandar Lampung (SMKN 1 s/d SMKN 8)
+  // --- SMK Negeri di Bandar Lampung ---
   'SMKN 1 Bandar Lampung',
   'SMKN 2 Bandar Lampung',
   'SMKN 3 Bandar Lampung',
-  'SMKN 4 Bandar Lampung',
-  'SMKN 5 Bandar Lampung',
   'SMKN 6 Bandar Lampung',
   'SMKN 7 Bandar Lampung',
   'SMKN 8 Bandar Lampung',
@@ -84,26 +91,27 @@ interface EventLandingProps {
 }
 
 // Helper to render bold, natural, professional title typography (Deep Crimson, Charcoal, Warm Gold)
-export const renderColorfulTitle = (titleText: string) => {
+export const renderColorfulTitle = (titleText: string, className?: string) => {
   if (!titleText) return null;
   const words = titleText.trim().split(/\s+/);
 
   return (
-    <span className="inline-flex flex-wrap items-baseline gap-x-2.5 sm:gap-x-3.5 gap-y-1 font-black uppercase tracking-tight leading-tight select-none">
+    <span className={`inline-flex flex-wrap items-baseline gap-x-2 sm:gap-x-2.5 gap-y-0.5 font-black uppercase tracking-tight leading-tight select-none ${className || ''}`}>
       {words.map((w, idx) => {
         const clean = w.toUpperCase().replace(/[^A-Z0-9]/g, '');
         let style = 'text-slate-900'; // Default charcoal
         
-        if (clean === 'FESTIVAL' || clean === 'MONOLOG') {
+        if (['FESTIVAL', 'MONOLOG', 'HARGA', 'ALUR', 'PEMBELIAN', 'PEMENTASAN', 'ACARA'].includes(clean)) {
           style = 'text-red-700'; // Deep crimson
-        } else if (clean === 'KOMUNITAS') {
+        } else if (['KOMUNITAS', 'KATEGORI', 'JADWAL', 'LOKASI', 'GATE', 'CHECK-IN'].includes(clean)) {
           style = 'text-slate-900'; // Elegant dark charcoal
-        } else if (clean === 'KATA' || clean === 'KITA') {
+        } else if (['KATA', 'KITA', 'TIKET', 'E-TICKET', 'LAMPUNG'].includes(clean)) {
           style = 'text-amber-600'; // Warm gold / amber
-        } else if (clean === 'TEATER' || clean === 'LAMPUNG') {
-          style = 'text-red-700';
         } else if (/^\d+$/.test(clean)) {
           style = 'text-slate-600';
+        } else {
+          const sequence = ['text-red-700', 'text-slate-900', 'text-amber-600'];
+          style = sequence[idx % sequence.length];
         }
 
         return (
@@ -148,6 +156,7 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [ticketCount, setTicketCount] = useState<number>(1);
   const [ticketNames, setTicketNames] = useState<string[]>(['']);
+  const [selectedPerformersList, setSelectedPerformersList] = useState<PerformerShow[]>([]);
 
   // STEP 2 Form State (Metode Pembayaran)
   const [paymentMethod, setPaymentMethod] = useState<'transfer' | 'offline'>('transfer');
@@ -234,6 +243,45 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
 
   const currentCategory = categories.find(c => c.id === selectedCategoryId);
 
+  // Handle selection of performer(s) from Lineup
+  const handleSelectPerformersFromLineup = (performers: PerformerShow[]) => {
+    setSelectedPerformersList(performers);
+
+    if (performers.length === 1) {
+      const cat1 = categories.find(c => c.id === 'cat-1-show') || categories[0];
+      if (cat1) setSelectedCategoryId(cat1.id);
+
+      const perfSchool = performers[0].schoolName;
+      const matchedSchool = BANDAR_LAMPUNG_INSTITUTIONS.find(
+        inst => inst.toLowerCase() === perfSchool.toLowerCase()
+      );
+      if (matchedSchool) {
+        setSelectedInstitutionPreset(matchedSchool);
+        setAttendeeType('pelajar');
+      } else {
+        setSelectedInstitutionPreset('Lainnya / Ketik Manual Sekolah / Kampus');
+        setCustomInstitutionText(perfSchool);
+        setAttendeeType('pelajar');
+      }
+    } else if (performers.length === 2) {
+      const cat2 = categories.find(c => c.id === 'cat-2-show') || categories[1] || categories[0];
+      if (cat2) setSelectedCategoryId(cat2.id);
+    } else {
+      const cat5 = categories.find(c => c.id === 'cat-5-show') || categories[2] || categories[0];
+      if (cat5) setSelectedCategoryId(cat5.id);
+    }
+
+    setView('booking');
+    setBookingStep(1);
+
+    setTimeout(() => {
+      const element = document.getElementById('booking-wizard-card');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
   // Handle Multi-Ticket Names sizing on change of count
   const handleTicketCountChange = (count: number) => {
     setTicketCount(count);
@@ -306,6 +354,10 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
     setSubmittingBooking(true);
 
     try {
+      const selectedShowsNote = selectedPerformersList.length > 0
+        ? `Pilihan Show: ${selectedPerformersList.map(p => `${p.showNumber} - ${p.actorName} (${p.schoolName})`).join('; ')}`
+        : '';
+
       const payload: any = {
         fullname,
         whatsapp,
@@ -315,7 +367,8 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
         ticketCount,
         categoryId: selectedCategoryId,
         paymentMethod,
-        ticketNames
+        ticketNames,
+        notes: selectedShowsNote
       };
 
       if (paymentMethod === 'transfer') {
@@ -442,6 +495,14 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
 
   const handleCategoryChange = (catId: string) => {
     setSelectedCategoryId(catId);
+    if (catId === 'cat-1-show' && selectedPerformersList.length !== 1) {
+      setSelectedPerformersList([FESTIVAL_PERFORMERS[0]]);
+    } else if (catId === 'cat-2-show' && selectedPerformersList.length !== 2) {
+      setSelectedPerformersList([FESTIVAL_PERFORMERS[0], FESTIVAL_PERFORMERS[1]]);
+    } else if (catId === 'cat-5-show') {
+      setSelectedPerformersList(FESTIVAL_PERFORMERS.slice(0, 5));
+    }
+
     if (catId === 'cat-pelajar') {
       setAttendeeType('pelajar');
     } else if (catId === 'cat-umum') {
@@ -812,7 +873,7 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
                 <Calendar className="w-6 h-6" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-black text-red-600 text-xs font-sans uppercase tracking-wider">Jadwal Acara</h3>
+                <h3 className="font-black text-xs font-sans uppercase tracking-wider">{renderColorfulTitle('Jadwal Acara')}</h3>
                 <p className="text-slate-800 text-sm font-extrabold">{eventSettings.date}</p>
                 <div className="flex items-center gap-1.5 text-xs text-amber-600 font-bold">
                   <Clock className="w-3.5 h-3.5" />
@@ -828,77 +889,137 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
                 <MapPin className="w-6 h-6" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-black text-blue-700 text-xs font-sans uppercase tracking-wider">Lokasi Pementasan</h3>
+                <h3 className="font-black text-xs font-sans uppercase tracking-wider">{renderColorfulTitle('Lokasi Pementasan')}</h3>
                 <p className="text-slate-800 text-sm font-extrabold">Taman Budaya Lampung</p>
                 <p className="text-xs text-slate-600 leading-relaxed font-semibold">{eventSettings.location}</p>
               </div>
             </div>
           </section>
 
+          {/* 10 Performers Lineup Section */}
+          <LineupSection onSelectPerformerBooking={handleSelectPerformersFromLineup} />
+
           {/* Category Ticket Pricing List */}
           <section className="space-y-6" id="pricing-bento">
-            <div className="text-center space-y-1.5">
-              <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-amber-500 to-blue-700 font-sans uppercase">Kategori & Harga Tiket</h2>
-              <p className="text-slate-500 text-xs font-semibold">Pilihlah kursi pementasan terbaik untuk menyaksikan pertunjukan eksklusif Anda.</p>
+            <div className="text-center space-y-2">
+              <span className="inline-block bg-red-100 text-red-700 border border-red-200 text-[10px] font-mono font-black uppercase tracking-widest px-3.5 py-1 rounded-full shadow-xs">
+                Pilihan Tiket Penonton
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black font-sans uppercase">
+                {renderColorfulTitle('Kategori & Paket Harga Tiket')}
+              </h2>
+              <p className="text-slate-500 text-xs sm:text-sm font-semibold max-w-xl mx-auto">
+                Hemat lebih banyak dengan Paket Multi-Show! Pilihlah paket tiket yang paling sesuai dengan jadwal pementasan Anda.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 w-full">
-              {categories.map(cat => (
-                <div 
-                  key={cat.id} 
-                  className={`border-2 hover:border-amber-500 rounded-2xl p-6 md:p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 ${
-                    cat.id === 'cat-pelajar' 
-                      ? 'bg-gradient-to-br from-red-100/90 via-red-50 to-amber-50/45 border-red-300' 
-                      : 'bg-gradient-to-br from-sky-100/90 via-blue-50 to-indigo-50/45 border-blue-300'
-                  }`}
-                  id={`pricing-${cat.id}`}
-                >
-                  {cat.id === 'cat-pelajar' ? (
-                    <div className="absolute top-4 right-4 bg-red-100 text-red-700 border border-red-200/50 text-[9px] font-mono font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
-                      <GraduationCap className="w-3.5 h-3.5" />
-                      <span>Pelajar / Mahasiswa</span>
-                    </div>
-                  ) : (
-                    <div className="absolute top-4 right-4 bg-blue-100 text-blue-700 border border-blue-200/50 text-[9px] font-mono font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
-                      <Ticket className="w-3.5 h-3.5" />
-                      <span>Umum / Praktisi</span>
-                    </div>
-                  )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+              {categories.map(cat => {
+                const isDayPass = cat.id === 'cat-5-show' || cat.name.includes('5') || cat.price === 35000;
+                const isDoubleShow = cat.id === 'cat-2-show' || cat.price === 30000;
 
-                  <div className="space-y-4">
-                    <p className="text-xs font-mono text-slate-400 uppercase tracking-widest font-bold">Kategori Tiket</p>
-                    <div>
-                      <h3 className={`text-xl font-extrabold tracking-tight transition-colors ${
-                        cat.id === 'cat-pelajar' ? 'text-red-600 group-hover:text-red-700' : 'text-blue-700 group-hover:text-blue-800'
-                      }`}>
-                        {cat.name.split(' (')[0]}
-                      </h3>
-                      {cat.name.includes('(') && (
-                        <p className="text-xs text-amber-600 font-mono mt-1 font-extrabold tracking-wide">
-                          {cat.name.split('(')[1].replace(')', '')}
-                        </p>
-                      )}
-                    </div>
-                    
-                    <div className="py-2">
-                      <span className="text-3xl font-black text-slate-950 font-mono tracking-tight">
-                        Rp {cat.price.toLocaleString('id-ID')}
-                      </span>
+                return (
+                  <div 
+                    key={cat.id} 
+                    className={`border-2 rounded-2xl p-6 flex flex-col justify-between shadow-xl hover:shadow-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 ${
+                      isDayPass 
+                        ? 'bg-gradient-to-br from-red-950 via-slate-900 to-indigo-950 border-amber-400 text-white shadow-red-900/20' 
+                        : isDoubleShow
+                          ? 'bg-gradient-to-br from-amber-500/10 via-amber-50/50 to-red-50/30 border-amber-400/80 text-slate-900'
+                          : 'bg-white border-slate-200 text-slate-900'
+                    }`}
+                    id={`pricing-${cat.id}`}
+                  >
+                    {/* Top Ribbon Badge */}
+                    {isDayPass ? (
+                      <div className="absolute top-4 right-4 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-[10px] uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1 shadow-md animate-pulse">
+                        <Flame className="w-3.5 h-3.5 fill-slate-950" />
+                        <span>SUPER DAY PASS</span>
+                      </div>
+                    ) : isDoubleShow ? (
+                      <div className="absolute top-4 right-4 bg-red-600 text-white font-black text-[10px] uppercase tracking-wider px-3 py-1 rounded-full shadow-sm">
+                        LEBIH HEMAT!
+                      </div>
+                    ) : (
+                      <div className="absolute top-4 right-4 bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full">
+                        SINGLE SHOW
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      <p className={`text-[10px] font-mono uppercase tracking-widest font-black ${isDayPass ? 'text-amber-400' : 'text-slate-400'}`}>
+                        Paket Penonton
+                      </p>
+
+                      <div>
+                        <h3 className={`text-xl font-black tracking-tight ${isDayPass ? 'text-white' : 'text-slate-900'}`}>
+                          {cat.name.split(' (')[0]}
+                        </h3>
+                        {cat.name.includes('(') && (
+                          <p className={`text-xs font-mono font-bold mt-0.5 ${isDayPass ? 'text-amber-300' : 'text-amber-600'}`}>
+                            {cat.name.split('(')[1].replace(')', '')}
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="py-2 border-y border-slate-200/20">
+                        <span className={`text-3xl font-black font-mono tracking-tight ${isDayPass ? 'text-amber-400' : 'text-slate-950'}`}>
+                          Rp {cat.price.toLocaleString('id-ID')}
+                        </span>
+                        <span className={`text-xs ml-1 font-bold ${isDayPass ? 'text-slate-300' : 'text-slate-500'}`}>
+                          / orang
+                        </span>
+                      </div>
+
+                      <p className={`text-xs font-medium leading-relaxed min-h-[70px] whitespace-pre-line ${isDayPass ? 'text-slate-300' : 'text-slate-600'}`}>
+                        {cat.description}
+                      </p>
                     </div>
 
-                    <p className="text-xs text-slate-600 font-semibold leading-relaxed min-h-[60px]">
-                      {cat.description}
-                    </p>
+                    {/* Booking Action CTA */}
+                    <div className="pt-6 border-t border-slate-200/20 mt-4 space-y-3">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className={isDayPass ? 'text-slate-400 font-medium' : 'text-slate-500 font-bold'}>Sisa Kuota Kursi:</span>
+                        <span className={`font-mono font-extrabold px-2.5 py-0.5 rounded-md text-[11px] ${
+                          isDayPass ? 'bg-white/10 text-amber-300 border border-white/20' : 'bg-slate-100 text-slate-800'
+                        }`}>
+                          {cat.quota - cat.sold} / {cat.quota}
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setSelectedCategoryId(cat.id);
+                          setView('booking');
+                          setBookingStep(1);
+                        }}
+                        className={`w-full py-2.5 px-4 rounded-xl font-extrabold text-xs shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer ${
+                          isDayPass
+                            ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black'
+                            : 'bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white'
+                        }`}
+                      >
+                        <Ticket className="w-4 h-4" />
+                        <span>Pilih Paket Tiket Ini</span>
+                      </button>
+                    </div>
                   </div>
+                );
+              })}
+            </div>
 
-                  <div className="border-t border-slate-200 pt-5 mt-6 flex justify-between items-center text-xs">
-                    <span className="text-slate-500 font-bold font-sans">Kapasitas Kursi:</span>
-                    <span className="font-mono text-slate-800 font-extrabold bg-white px-3 py-1 border border-slate-200 rounded-lg shadow-sm">
-                      {cat.quota - cat.sold} / {cat.quota} Kursi
-                    </span>
-                  </div>
-                </div>
-              ))}
+            {/* Terms Alert Box for Day Pass */}
+            <div className="bg-amber-50 border-2 border-amber-300 p-4 rounded-2xl flex items-start gap-3 shadow-xs">
+              <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+              <div className="text-xs text-slate-800 space-y-1">
+                <p className="font-extrabold text-slate-900">Aturan & Syarat Penggunaan Paket Tiket:</p>
+                <p className="leading-relaxed font-semibold text-slate-700">
+                  • <strong>Paket 5 Pertunjukan (Day Pass Rp 35.000)</strong> berlaku khusus untuk 5 pertunjukan pada <strong>HARI YANG SAMA</strong>. Tiket tidak dapat dipakai atau dipindahkan ke hari berikutnya / hari lain.
+                </p>
+                <p className="leading-relaxed font-semibold text-slate-700">
+                  • Penonton dapat bebas memilih judul pertunjukan yang ingin ditonton di area registrasi ulang / check-in Taman Budaya Lampung.
+                </p>
+              </div>
             </div>
           </section>
 
@@ -908,8 +1029,8 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
               <span className="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-mono font-black uppercase tracking-widest px-3 py-1 rounded-full">
                 Panduan Penonton
               </span>
-              <h2 className="text-2xl font-black text-slate-900 font-sans uppercase tracking-tight">
-                Alur Pembelian E-Ticket & Gate Check-In
+              <h2 className="text-2xl font-black font-sans uppercase tracking-tight">
+                {renderColorfulTitle('Alur Pembelian E-Ticket & Gate Check-In')}
               </h2>
               <p className="text-slate-500 text-xs font-semibold max-w-xl mx-auto">
                 Ikuti 4 langkah mudah berikut untuk mendapatkan E-Ticket digital resmi pementasan monolog.
@@ -1073,6 +1194,111 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
                       />
                     </div>
                   </div>
+
+                  {/* Show Selection Box based on chosen category */}
+                  {selectedCategoryId === 'cat-1-show' && (
+                    <div className="bg-amber-50/90 border border-amber-300 p-3.5 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-amber-900 font-extrabold text-xs flex items-center gap-1.5">
+                          <Flame className="w-4 h-4 text-amber-600" />
+                          <span>Pilih 1 Pertunjukan Monolog yang Ingin Ditonton:</span>
+                        </label>
+                        <span className="text-[10px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full font-mono font-black">
+                          1 Show Pass
+                        </span>
+                      </div>
+                      <select
+                        value={selectedPerformersList[0]?.id || 1}
+                        onChange={(e) => {
+                          const p = FESTIVAL_PERFORMERS.find(item => item.id === parseInt(e.target.value, 10));
+                          if (p) setSelectedPerformersList([p]);
+                        }}
+                        className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-slate-800 text-xs font-bold focus:outline-none focus:border-red-500 shadow-xs"
+                      >
+                        {FESTIVAL_PERFORMERS.map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.showNumber}: {p.actorName} ({p.schoolName}) - {p.genreTag}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedPerformersList[0] && (
+                        <p className="text-[11px] text-slate-600 font-semibold italic">
+                          Aktor/Aktris: <strong className="text-red-700">{selectedPerformersList[0].actorName}</strong> dari <strong className="text-slate-900">{selectedPerformersList[0].schoolName}</strong>
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {selectedCategoryId === 'cat-2-show' && (
+                    <div className="bg-amber-50/90 border border-amber-300 p-3.5 rounded-xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-amber-900 font-extrabold text-xs flex items-center gap-1.5">
+                          <Flame className="w-4 h-4 text-amber-600" />
+                          <span>Pilih 2 Pertunjukan Monolog yang Ingin Ditonton:</span>
+                        </label>
+                        <span className="text-[10px] text-red-700 bg-red-100 px-2.5 py-0.5 rounded-full font-mono font-extrabold">
+                          2 Show Pass (Hemat Rp 10.000)
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] text-slate-600 font-bold mb-1">Pertunjukan 1:</label>
+                          <select
+                            value={selectedPerformersList[0]?.id || 1}
+                            onChange={(e) => {
+                              const p1 = FESTIVAL_PERFORMERS.find(item => item.id === parseInt(e.target.value, 10)) || FESTIVAL_PERFORMERS[0];
+                              const p2 = selectedPerformersList[1] || FESTIVAL_PERFORMERS[1];
+                              setSelectedPerformersList([p1, p2]);
+                            }}
+                            className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-slate-800 text-xs font-bold focus:outline-none focus:border-red-500 shadow-xs"
+                          >
+                            {FESTIVAL_PERFORMERS.map(p => (
+                              <option key={p.id} value={p.id}>
+                                {p.showNumber}: {p.actorName} ({p.schoolName})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] text-slate-600 font-bold mb-1">Pertunjukan 2:</label>
+                          <select
+                            value={selectedPerformersList[1]?.id || 2}
+                            onChange={(e) => {
+                              const p1 = selectedPerformersList[0] || FESTIVAL_PERFORMERS[0];
+                              const p2 = FESTIVAL_PERFORMERS.find(item => item.id === parseInt(e.target.value, 10)) || FESTIVAL_PERFORMERS[1];
+                              setSelectedPerformersList([p1, p2]);
+                            }}
+                            className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-slate-800 text-xs font-bold focus:outline-none focus:border-red-500 shadow-xs"
+                          >
+                            {FESTIVAL_PERFORMERS.map(p => (
+                              <option key={p.id} value={p.id}>
+                                {p.showNumber}: {p.actorName} ({p.schoolName})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedCategoryId === 'cat-5-show' && (
+                    <div className="bg-gradient-to-r from-red-900 to-indigo-950 text-white p-3.5 rounded-xl space-y-1.5 border border-amber-400">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-xs text-amber-300 flex items-center gap-1.5">
+                          <Flame className="w-4 h-4 text-amber-400 fill-amber-400" />
+                          Akses Maraton Day Pass (5 Pertunjukan)
+                        </span>
+                        <span className="text-[10px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded-full">
+                          SUPER HEMAT
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-200 leading-relaxed font-medium">
+                        Anda berhak menyaksikan <strong>5 Pertunjukan Monolog Pilihan</strong> pada hari yang sama! Bebas memilih 5 judul pertunjukan favorit Anda saat check-in di Taman Budaya Lampung.
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-slate-600 mb-1.5 font-bold">Nama Lengkap Pemesan (Sesuai KTP/Kartu Pelajar)</label>
@@ -1248,7 +1474,7 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
               <div className="space-y-6">
                 <div className="border-b border-slate-100 pb-3">
                   <h3 className="text-lg font-black text-slate-900">Pilih Metode Pembayaran</h3>
-                  <p className="text-slate-500 text-xs font-semibold">Pilihlah salah satu cara pelunasan tiket resmi di bawah ini.</p>
+                  <p className="text-slate-500 text-xs font-semibold">Pilihlah cara pelunasan tiket resmi di bawah ini (DANA / QRIS / Kwitansi Offline).</p>
                 </div>
 
                 {/* Toggle Buttons */}
@@ -1263,7 +1489,7 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
                     id="btn-pay-transfer"
                   >
                     <CreditCard className="w-6 h-6 text-amber-500" />
-                    <span className="text-xs">Transfer Bank (Mandiri)</span>
+                    <span className="text-xs font-bold">DANA / QRIS Barcode</span>
                   </button>
                   <button
                     onClick={() => setPaymentMethod('offline')}
@@ -1275,77 +1501,68 @@ export default function EventLanding({ eventSettings, categories, onSuccessBooki
                     id="btn-pay-offline"
                   >
                     <User className="w-6 h-6 text-amber-500" />
-                    <span className="text-xs">Titip Offline (Kwitansi)</span>
+                    <span className="text-xs font-bold">Titip Offline (Kwitansi)</span>
                   </button>
                 </div>
 
                 {/* Method instructions */}
-                <div className="bg-amber-50/85 p-5 rounded-xl border-2 border-amber-200 space-y-4 text-xs text-slate-700">
-                  {paymentMethod === 'transfer' ? (
-                    <div className="space-y-3">
-                      <p className="font-extrabold text-slate-900 font-sans text-xs">Instruksi Transfer Bank Mandiri:</p>
-                      <div className="p-3.5 bg-white rounded-lg border-2 border-amber-200 font-mono text-[11px] text-slate-700 space-y-1.5 shadow-sm">
-                        <p>Bank Penerima: <strong className="text-slate-900">{eventSettings.bankName}</strong></p>
-                        <p>No. Rekening: <strong className="text-red-600 text-sm font-black">{eventSettings.bankAccount}</strong></p>
-                        <p>Atas Nama: <strong className="text-slate-900">{eventSettings.bankAccountName}</strong></p>
-                      </div>
-
-                      <div className="text-[11px] text-slate-500 leading-relaxed font-semibold">
-                        <p>1. Silakan lakukan transfer sebesar nominal tagihan Anda.</p>
-                        <p>2. Simpan struk cetak ATM, SMS banking, atau tangkapan layar m-banking Anda untuk di-upload di langkah berikutnya.</p>
-                      </div>
+                {paymentMethod === 'transfer' ? (
+                  <QrisCard
+                    danaNumber={eventSettings.bankAccount || '089630869336'}
+                    danaName={eventSettings.bankAccountName || 'MAZAYA GINA'}
+                    merchantName="Gina"
+                    nmid="ID1026546039045"
+                  />
+                ) : (
+                  <div className="bg-amber-50/85 p-5 rounded-xl border-2 border-amber-200 space-y-4 text-xs text-slate-700">
+                    <p className="font-extrabold text-slate-900 font-sans text-xs">Instruksi Pembayaran Offline Titip Panitia:</p>
+                    
+                    <div>
+                      <label className="block text-slate-600 mb-1 font-bold">Pilih Koordinator Penjualan Tiket</label>
+                      <select
+                        value={selectedCoordinatorIdx}
+                        onChange={(e) => setSelectedCoordinatorIdx(parseInt(e.target.value, 10))}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 text-slate-800 font-bold rounded-lg focus:outline-none"
+                      >
+                        {eventSettings.coordinators.map((c, idx) => (
+                          <option key={idx} value={idx}>{c.name}</option>
+                        ))}
+                      </select>
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <p className="font-extrabold text-slate-900 font-sans text-xs">Instruksi Pembayaran Offline Titip Panitia:</p>
-                      
+
+                    <div className="grid grid-cols-2 gap-3 text-xs">
                       <div>
-                        <label className="block text-slate-600 mb-1 font-bold">Pilih Koordinator Penjualan Tiket</label>
-                        <select
-                          value={selectedCoordinatorIdx}
-                          onChange={(e) => setSelectedCoordinatorIdx(parseInt(e.target.value, 10))}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 text-slate-800 font-bold rounded-lg focus:outline-none"
-                        >
-                          {eventSettings.coordinators.map((c, idx) => (
-                            <option key={idx} value={idx}>{c.name}</option>
-                          ))}
-                        </select>
+                        <p className="text-[10px] text-slate-400 font-mono font-bold">No. WA Koordinator</p>
+                        <p className="mt-1">
+                          <a
+                            href={`https://wa.me/${(eventSettings.coordinators[selectedCoordinatorIdx]?.phone || '').replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 font-bold text-emerald-700 hover:text-emerald-800 transition-colors bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 shadow-sm"
+                          >
+                            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                            {eventSettings.coordinators[selectedCoordinatorIdx]?.phone}
+                          </a>
+                        </p>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <p className="text-[10px] text-slate-400 font-mono font-bold">No. WA Koordinator</p>
-                          <p className="mt-1">
-                            <a
-                              href={`https://wa.me/${(eventSettings.coordinators[selectedCoordinatorIdx]?.phone || '').replace(/[^0-9]/g, '')}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 font-bold text-emerald-700 hover:text-emerald-800 transition-colors bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 shadow-sm"
-                            >
-                              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                              {eventSettings.coordinators[selectedCoordinatorIdx]?.phone}
-                            </a>
-                          </p>
-                        </div>
-                        <div>
-                          <label className="block text-slate-600 mb-1 font-bold">Nomor Kwitansi Lunas</label>
-                          <input
-                            type="text"
-                            required
-                            value={receiptNumber}
-                            onChange={(e) => setReceiptNumber(e.target.value)}
-                            placeholder="Contoh: KW-10982"
-                            className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded text-slate-800 font-semibold focus:outline-none focus:border-amber-500"
-                          />
-                        </div>
+                      <div>
+                        <label className="block text-slate-600 mb-1 font-bold">Nomor Kwitansi Lunas</label>
+                        <input
+                          type="text"
+                          required
+                          value={receiptNumber}
+                          onChange={(e) => setReceiptNumber(e.target.value)}
+                          placeholder="Contoh: KW-10982"
+                          className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded text-slate-800 font-semibold focus:outline-none focus:border-amber-500"
+                        />
                       </div>
-
-                      <p className="text-[11px] text-slate-500 leading-relaxed font-semibold">
-                        Harap minta bukti kwitansi kertas resmi berstempel dari koordinator offline di atas, dan isikan nomor kwitansi lunas yang tertera.
-                      </p>
                     </div>
-                  )}
-                </div>
+
+                    <p className="text-[11px] text-slate-500 leading-relaxed font-semibold">
+                      Harap minta bukti kwitansi kertas resmi berstempel dari koordinator offline di atas, dan isikan nomor kwitansi lunas yang tertera.
+                    </p>
+                  </div>
+                )}
 
                 {/* Back / Next Row */}
                 <div className="flex justify-between pt-4 border-t border-slate-100 text-xs">

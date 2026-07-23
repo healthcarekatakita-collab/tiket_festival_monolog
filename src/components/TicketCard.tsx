@@ -411,27 +411,45 @@ export default function TicketCard({ ticket, eventSettings, onBack }: TicketCard
         ctx.fillStyle = '#64748b';
         ctx.fillText('PEMEGANG TIKET', 120, 560);
 
-        ctx.font = '900 48px sans-serif';
+        ctx.font = '900 36px sans-serif';
         ctx.fillStyle = '#0f172a';
-        ctx.fillText(ticket.ownerName.toUpperCase(), 120, 610);
+        ctx.fillText(ticket.ownerName.toUpperCase(), 120, 605, 650);
 
-        // Kategori Tiket
+        // Kategori Tiket & Show Validity
         ctx.font = 'bold 20px monospace';
         ctx.fillStyle = '#64748b';
-        ctx.fillText('KATEGORI TIKET', 120, 740);
+        ctx.fillText('KATEGORI TIKET', 120, 715);
 
-        ctx.font = '900 36px sans-serif';
+        ctx.font = 'bold 22px sans-serif';
         ctx.fillStyle = '#dc2626';
-        ctx.fillText(ticket.categoryName.toUpperCase(), 120, 790);
+        ctx.fillText(ticket.categoryName.toUpperCase(), 120, 755, 650);
+
+        const maxAllowedCanvas = ticket.maxCheckIns || (ticket.categoryName.includes('5') ? 5 : ticket.categoryName.includes('2') ? 2 : 1);
+        const checkInCountCanvas = ticket.checkInCount ?? (ticket.isCheckedIn ? maxAllowedCanvas : 0);
+        const validityCanvas = maxAllowedCanvas === 5 
+          ? '✓ BERLAKU: 5 SHOW MARATON (5x MASUK GATE)'
+          : maxAllowedCanvas === 2
+          ? '✓ BERLAKU: 2 SHOW PASS (2x MASUK GATE)'
+          : '✓ BERLAKU: 1 SHOW PASS (1x MASUK GATE)';
+
+        ctx.font = 'bold 17px sans-serif';
+        ctx.fillStyle = '#047857';
+        ctx.fillText(validityCanvas, 120, 795, 650);
+
+        // Scan count status
+        const stampText = `STAMP GATE: ${checkInCountCanvas}/${maxAllowedCanvas} SHOW DIGUNAKAN`;
+        ctx.font = 'bold 16px monospace';
+        ctx.fillStyle = '#475569';
+        ctx.fillText(stampText, 120, 830, 650);
 
         // Kode Booking
         ctx.font = 'bold 20px monospace';
         ctx.fillStyle = '#64748b';
-        ctx.fillText('KODE BOOKING', 120, 860);
+        ctx.fillText('KODE BOOKING', 120, 870);
 
-        ctx.font = '900 36px monospace';
+        ctx.font = '900 32px monospace';
         ctx.fillStyle = '#1d4ed8';
-        ctx.fillText(ticket.bookingCode.toUpperCase(), 120, 910);
+        ctx.fillText(ticket.bookingCode.toUpperCase(), 120, 910, 650);
 
         // Vertical divider before QR Code
         ctx.strokeStyle = '#e2e8f0';
@@ -826,6 +844,14 @@ export default function TicketCard({ ticket, eventSettings, onBack }: TicketCard
                   <p className="text-[11px] font-extrabold text-red-600 tracking-tight leading-tight uppercase">
                     {ticket.categoryName}
                   </p>
+                  {(() => {
+                    const maxAllowed = ticket.maxCheckIns || (ticket.categoryName.includes('5') ? 5 : ticket.categoryName.includes('2') ? 2 : 1);
+                    return (
+                      <span className="inline-block text-[8px] font-black text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-1">
+                        {maxAllowed === 5 ? '✓ Berlaku 5 Show' : maxAllowed === 2 ? '✓ Berlaku 2 Show' : '✓ Berlaku 1 Show'}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div>
                   <p className="text-[7px] text-slate-500 uppercase tracking-widest font-mono font-bold">KODE BOOKING</p>
@@ -834,6 +860,34 @@ export default function TicketCard({ ticket, eventSettings, onBack }: TicketCard
                   </p>
                 </div>
               </div>
+
+              {/* Multi-Show Gate Stamp Indicators */}
+              {(() => {
+                const maxAllowed = ticket.maxCheckIns || (ticket.categoryName.includes('5') ? 5 : ticket.categoryName.includes('2') ? 2 : 1);
+                const checkInCount = ticket.checkInCount ?? (ticket.isCheckedIn ? maxAllowed : 0);
+                return (
+                  <div className="pt-2 border-t border-slate-200/80">
+                    <p className="text-[7px] text-slate-500 uppercase tracking-widest font-mono font-bold mb-1">
+                      Stamp Gate ({checkInCount}/{maxAllowed} Show Terpakai)
+                    </p>
+                    <div className="flex gap-1 flex-wrap">
+                      {Array.from({ length: maxAllowed }).map((_, i) => {
+                        const isUsed = i < checkInCount;
+                        return (
+                          <span
+                            key={i}
+                            className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-black border ${
+                              isUsed ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-slate-100 text-slate-400 border-slate-200'
+                            }`}
+                          >
+                            {isUsed ? `✓ Show ${i + 1}` : `○ Show ${i + 1}`}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Right side QR Code wrapper */}

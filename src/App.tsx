@@ -401,6 +401,10 @@ export default function App() {
               <div className="space-y-1.5 pt-2 border-t border-slate-200">
                 <span className="text-[10px] uppercase font-mono tracking-wider text-slate-500 font-bold block">Hotline Resmi (WhatsApp):</span>
                 <div className="flex flex-col gap-2 mt-1">
+                  <a href="https://wa.me/6282181154454" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-emerald-600 transition-colors bg-white px-3 py-1.5 rounded-lg border border-slate-200 font-mono text-[10px] w-fit shadow-sm">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                    <span className="font-sans font-bold text-slate-700">Kayen:</span> 0821-8115-4454
+                  </a>
                   <a href="https://wa.me/6283125721380" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-emerald-600 transition-colors bg-white px-3 py-1.5 rounded-lg border border-slate-200 font-mono text-[10px] w-fit shadow-sm">
                     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                     <span className="font-sans font-bold text-slate-700">Rere:</span> 0831-2572-1380

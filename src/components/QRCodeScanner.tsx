@@ -20,6 +20,9 @@ interface ScanResult {
   ownerName?: string;
   categoryName?: string;
   checkInTime?: string;
+  checkInCount?: number;
+  maxCheckIns?: number;
+  remainingCheckIns?: number;
 }
 
 export default function QRCodeScanner({ onSuccessCheckIn, bookings }: QRCodeScannerProps) {
@@ -120,25 +123,31 @@ export default function QRCodeScanner({ onSuccessCheckIn, bookings }: QRCodeScan
       if (response.ok) {
         setScanResult({
           status: 'success',
-          message: 'Check-In Berhasil! Silakan masuk.',
+          message: data.message || 'Check-In Berhasil! Silakan masuk.',
           ticketNumber: data.ticket.ticketNumber,
           ownerName: data.ticket.ownerName,
           categoryName: data.ticket.categoryName,
-          checkInTime: new Date(data.ticket.checkInTime).toLocaleTimeString('id-ID')
+          checkInTime: new Date(data.ticket.checkInTime).toLocaleTimeString('id-ID'),
+          checkInCount: data.checkInCount || data.ticket.checkInCount || 1,
+          maxCheckIns: data.maxCheckIns || data.ticket.maxCheckIns || 1,
+          remainingCheckIns: data.remainingCheckIns ?? (data.ticket.maxCheckIns - data.ticket.checkInCount)
         });
         // Play high-pitch success sound
         playBeep(2000, 150);
         onSuccessCheckIn();
       } else {
-        // Check if already checked in from the response data
-        if (data.error && data.error.includes('sudah pernah digunakan')) {
+        // Check if already checked in / quota exhausted from response data
+        if (data.error && (data.error.includes('sudah pernah digunakan') || data.error.includes('HABIS'))) {
           setScanResult({
             status: 'already',
-            message: 'TOLAK MASUK: Tiket sudah dipindai sebelumnya!',
+            message: data.error || 'TOLAK MASUK: Kuota scan tiket telah habis!',
             ticketNumber: data.ticketNumber || ticketNumber,
             ownerName: data.ownerName || 'Tidak Diketahui',
             categoryName: data.categoryName || '',
-            checkInTime: data.checkInTime ? new Date(data.checkInTime).toLocaleTimeString('id-ID') : 'Tidak Diketahui'
+            checkInTime: data.checkInTime ? new Date(data.checkInTime).toLocaleTimeString('id-ID') : 'Tidak Diketahui',
+            checkInCount: data.checkInCount || data.maxCheckIns || 1,
+            maxCheckIns: data.maxCheckIns || 1,
+            remainingCheckIns: 0
           });
           playBeep(120, 500); // low buzz
         } else {
@@ -363,7 +372,28 @@ export default function QRCodeScanner({ onSuccessCheckIn, bookings }: QRCodeScan
                       </div>
 
                       <div className="border-t border-slate-200 pt-3">
-                        <p className="text-slate-400 font-mono text-[10px] font-black uppercase">Waktu Check-In</p>
+                        <p className="text-slate-400 font-mono text-[10px] font-black uppercase mb-1.5">Status Kuota Masuk Gate ({scanResult.checkInCount || 1}/{scanResult.maxCheckIns || 1} Show)</p>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {Array.from({ length: scanResult.maxCheckIns || 1 }).map((_, idx) => {
+                            const isUsed = idx < (scanResult.checkInCount || 1);
+                            return (
+                              <div
+                                key={idx}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-black flex items-center gap-1 border ${
+                                  isUsed
+                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                    : 'bg-slate-100 text-slate-400 border-slate-200'
+                                }`}
+                              >
+                                {isUsed ? '✓ Show Used' : `○ Show ${idx + 1}`}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-200 pt-3">
+                        <p className="text-slate-400 font-mono text-[10px] font-black uppercase">Waktu Check-In Terakhir</p>
                         <p className="text-sm font-extrabold text-slate-700">
                           {scanResult.checkInTime} WIB
                         </p>

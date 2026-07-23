@@ -41,6 +41,12 @@ interface EventSettings {
   googleAppsScriptUrl?: string;
 }
 
+interface CheckInLogEntry {
+  time: string;
+  operator?: string;
+  checkInIndex: number;
+}
+
 interface IndividualTicket {
   ticketNumber: string;
   bookingCode: string;
@@ -48,6 +54,9 @@ interface IndividualTicket {
   categoryName: string;
   isCheckedIn: boolean;
   checkInTime: string | null;
+  checkInCount?: number;
+  maxCheckIns?: number;
+  checkInLogs?: CheckInLogEntry[];
   securityHash: string;
   accessCode?: string;
 }
@@ -136,331 +145,65 @@ function writeDB(data: any) {
 function initializeDB() {
   const defaultCategories: TicketCategory[] = [
     {
-      id: 'cat-umum',
-      name: 'Umum (Reguler)',
-      price: 35000,
-      quota: 50,
-      sold: 1,
-      description: "Rasakan kedalaman emosi, kritik sosial, dan pementasan monolog paling spektakuler di Lampung! Kategori ini terbuka untuk seluruh pecinta seni teater, alumni, praktisi seni, dan masyarakat umum. Bersiaplah terhanyut dalam karakter kuat dan tata panggung yang memukau!"
+      id: 'cat-1-show',
+      name: 'Single Show Pass (1 Pertunjukan)',
+      price: 20000,
+      quota: 300,
+      sold: 0,
+      description: "Akses menonton 1 Pementasan Monolog Pilihan penuh emosi & karakter kuat. Bebas tentukan judul pertunjukan dari 10 penampil sekolah jagoan Anda!"
     },
     {
-      id: 'cat-pelajar',
-      name: 'Pelajar / Mahasiswa',
+      id: 'cat-2-show',
+      name: 'Double Show Pass (2 Pertunjukan) — LEBIH HEMAT!',
+      price: 30000,
+      quota: 400,
+      sold: 0,
+      description: "Ganda keseruannya! Cuma Rp 15.000/show! Nonton 2 pertunjukan monolog favorit sekaligus dalam 1 hari. Pilihan paling terfavorit & direkomendasikan bagi penonton!"
+    },
+    {
+      id: 'cat-5-show',
+      name: 'Maraton Day Pass (5 Pertunjukan) — SUPER HEMAT!',
       price: 35000,
-      quota: 450,
-      sold: 2,
-      description: "Dukungan penuh untuk kreativitas generasi muda! Penawaran khusus bagi pelajar aktif (SMP/SMA/Sederajat) & mahasiswa se-Provinsi Lampung. Jadilah saksi perjuangan seni peran sekolah jagoanmu secara langsung di atas panggung megah! *Wajib menunjukkan Kartu Identitas Pelajar/Mahasiswa aktif di lokasi.*"
+      quota: 500,
+      sold: 0,
+      description: "Pengalaman maraton teater paling memuaskan! Cuma Rp 7.000/show (Hemat 65%)! Nonton 5 pementasan monolog spektakuler sepuasnya.\n\n⚠️ Catatan Khusus: Berlaku untuk 5 pertunjukan pada hari yang sama (tidak dapat dipindah/digunakan untuk hari berikutnya)."
     }
   ];
 
   const defaultSettings: EventSettings = {
     eventTitle: 'Festival Monolog Komunitas Kata Kita',
-    subtitle: 'Festival Monolog Pelajar Se-Provinsi Lampung 2026',
-    description: 'Saksikan pementasan seni monolog paling spektakuler dan penuh emosi di Lampung! Festival Monolog Pelajar Se-Provinsi Lampung 2026 mempertemukan talenta-talenta muda berbakat dari berbagai sekolah menengah dan universitas untuk memperebutkan gelar penampil monolog terbaik se-Provinsi. Bersiaplah terhanyut dalam karakter-karakter yang kuat, penulisan naskah yang tajam, dan visual tata panggung yang memukau. Jadilah bagian dari sejarah kebangkitan teater remaja Lampung dan dukung perjuangan seni peran sekolah jagoanmu secara langsung di atas panggung megah Taman Budaya Lampung!',
+    subtitle: '10 Pementasan Monolog Pelajar Se-Provinsi Lampung 2026',
+    description: 'Saksikan pementasan seni monolog paling spektakuler dan penuh emosi di Lampung! Festival Monolog Pelajar Se-Provinsi Lampung 2026 mempertemukan 10 talenta muda berbakat dari berbagai sekolah menengah se-Lampung untuk memperebutkan gelar penampil monolog terbaik. Bersiaplah terhanyut dalam karakter-karakter yang kuat, penulisan naskah yang tajam, dan visual tata panggung yang memukau di atas panggung megah Taman Budaya Lampung!',
     date: '22 - 23 Agustus 2026',
     time: '10:00 WIB - Selesai',
     location: 'Taman Budaya Lampung, Jalan Cut Nyak Dien No. 24, Palapa, Kecamatan Tanjung Karang Pusat, Kota Bandar Lampung',
-    bankName: 'Bank Mandiri',
-    bankAccount: '114-00-2234455-8',
-    bankAccountName: 'Komunitas Kata Kita',
+    bankName: 'DANA / E-Wallet & Transfer Bank',
+    bankAccount: '089630869336',
+    bankAccountName: 'MAZAYA GINA',
+    qrisUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=00020101021126580014ID.LINKAJA.WWW01189360091500000000000215ID10265460390450303UME51440014ID.QRIS.WWW0215ID10265460390450303UME5204581253033605802ID5904GINA6013BANDARLAMPUNG61053511162070703A016304C25C',
     coordinators: [
+      { name: 'Mazaya Gina (Koordinator Tiket Utama)', phone: '089630869336' },
+      { name: 'Kayen (Hotline Resmi Panitia)', phone: '082181154454' },
       { name: 'Rere (Hotline Panitia 1)', phone: '083125721380' },
       { name: 'EL (Hotline Panitia 2)', phone: '082159057672' }
     ],
-    googleSheetsUrl: 'https://docs.google.com/spreadsheets/d/1example_sheets_id/edit',
+    googleSheetsUrl: 'https://docs.google.com/spreadsheets/d/1W1tyzCAUyJoLL-cVZJzd7HGSp0dRtcWVMJLXs15AkPo/edit?usp=sharing',
     googleAppsScriptUrl: ''
   };
 
-  // Seeding sample bookings with diverse schools/campuses
-  const sampleBookings: Booking[] = [
-    {
-      id: 'A8D92F',
-      fullname: 'Muhammad Farhan',
-      whatsapp: '081277889900',
-      email: 'farhan.m@gmail.com',
-      city: 'Bandar Lampung',
-      institution: 'Universitas Lampung',
-      ticketCount: 1,
-      categoryId: 'cat-pelajar',
-      bookingDate: '2026-07-18T14:35:00.000Z',
-      status: 'Lunas',
-      verificationStatus: 'Disetujui',
-      paymentMethod: 'transfer',
-      bankDetails: {
-        bankName: 'Bank Mandiri',
-        bankAccount: '114-00-2234455-8',
-        bankAccountName: 'Komunitas Kata Kita'
-      },
-      paymentProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-      tickets: [
-        {
-          ticketNumber: 'FMKKL-2026-000001',
-          bookingCode: 'A8D92F',
-          ownerName: 'Muhammad Farhan',
-          categoryName: 'Pelajar / Mahasiswa',
-          isCheckedIn: false,
-          checkInTime: null,
-          securityHash: generateSecurityHash('FMKKL-2026-000001', 'A8D92F', 'Muhammad Farhan'),
-          accessCode: 'TKT-FAR88'
-        }
-      ],
-      notes: 'Terverifikasi otomatis saat seed database.'
-    },
-    {
-      id: 'SMN201',
-      fullname: 'Dewi Lestari',
-      whatsapp: '085766223344',
-      email: 'dewi.lestari@gmail.com',
-      city: 'Bandar Lampung',
-      institution: 'SMAN 2 Bandar Lampung',
-      ticketCount: 2,
-      categoryId: 'cat-pelajar',
-      bookingDate: '2026-07-19T09:12:00.000Z',
-      status: 'Lunas',
-      verificationStatus: 'Disetujui',
-      paymentMethod: 'transfer',
-      bankDetails: {
-        bankName: 'Bank Mandiri',
-        bankAccount: '114-00-2234455-8',
-        bankAccountName: 'Komunitas Kata Kita'
-      },
-      paymentProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-      tickets: [
-        {
-          ticketNumber: 'FMKKL-2026-000002',
-          bookingCode: 'SMN201',
-          ownerName: 'Dewi Lestari',
-          categoryName: 'Pelajar / Mahasiswa',
-          isCheckedIn: false,
-          checkInTime: null,
-          securityHash: generateSecurityHash('FMKKL-2026-000002', 'SMN201', 'Dewi Lestari'),
-          accessCode: 'TKT-DEW55'
-        },
-        {
-          ticketNumber: 'FMKKL-2026-000003',
-          bookingCode: 'SMN201',
-          ownerName: 'Salsa Bila',
-          categoryName: 'Pelajar / Mahasiswa',
-          isCheckedIn: false,
-          checkInTime: null,
-          securityHash: generateSecurityHash('FMKKL-2026-000003', 'SMN201', 'Salsa Bila'),
-          accessCode: 'TKT-SAL22'
-        }
-      ]
-    },
-    {
-      id: 'SMN301',
-      fullname: 'Siti Aisyah',
-      whatsapp: '081399887766',
-      email: 'siti.aisyah@gmail.com',
-      city: 'Bandar Lampung',
-      institution: 'SMAN 3 Bandar Lampung',
-      ticketCount: 3,
-      categoryId: 'cat-pelajar',
-      bookingDate: '2026-07-19T10:20:00.000Z',
-      status: 'Lunas',
-      verificationStatus: 'Disetujui',
-      paymentMethod: 'transfer',
-      bankDetails: {
-        bankName: 'Bank Mandiri',
-        bankAccount: '114-00-2234455-8',
-        bankAccountName: 'Komunitas Kata Kita'
-      },
-      paymentProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-      tickets: [
-        {
-          ticketNumber: 'FMKKL-2026-000004',
-          bookingCode: 'SMN301',
-          ownerName: 'Siti Aisyah',
-          categoryName: 'Pelajar / Mahasiswa',
-          isCheckedIn: false,
-          checkInTime: null,
-          securityHash: generateSecurityHash('FMKKL-2026-000004', 'SMN301', 'Siti Aisyah'),
-          accessCode: 'TKT-AIS11'
-        },
-        {
-          ticketNumber: 'FMKKL-2026-000005',
-          bookingCode: 'SMN301',
-          ownerName: 'Bunga Citra',
-          categoryName: 'Pelajar / Mahasiswa',
-          isCheckedIn: false,
-          checkInTime: null,
-          securityHash: generateSecurityHash('FMKKL-2026-000005', 'SMN301', 'Bunga Citra'),
-          accessCode: 'TKT-BUN33'
-        },
-        {
-          ticketNumber: 'FMKKL-2026-000006',
-          bookingCode: 'SMN301',
-          ownerName: 'Rina Nose',
-          categoryName: 'Pelajar / Mahasiswa',
-          isCheckedIn: false,
-          checkInTime: null,
-          securityHash: generateSecurityHash('FMKKL-2026-000006', 'SMN301', 'Rina Nose'),
-          accessCode: 'TKT-RIN44'
-        }
-      ]
-    },
-    {
-      id: 'SMN302',
-      fullname: 'Budi Santoso',
-      whatsapp: '082188776655',
-      email: 'budi.santoso@yahoo.com',
-      city: 'Bandar Lampung',
-      institution: 'SMAN 3 Bandar Lampung',
-      ticketCount: 1,
-      categoryId: 'cat-pelajar',
-      bookingDate: '2026-07-20T08:15:00.000Z',
-      status: 'Menunggu Verifikasi',
-      verificationStatus: 'Belum Diverifikasi',
-      paymentMethod: 'transfer',
-      bankDetails: {
-        bankName: 'Bank Mandiri',
-        bankAccount: '114-00-2234455-8',
-        bankAccountName: 'Komunitas Kata Kita'
-      },
-      paymentProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-      tickets: [
-        {
-          ticketNumber: 'FMKKL-2026-000007',
-          bookingCode: 'SMN302',
-          ownerName: 'Budi Santoso',
-          categoryName: 'Pelajar / Mahasiswa',
-          isCheckedIn: false,
-          checkInTime: null,
-          securityHash: generateSecurityHash('FMKKL-2026-000007', 'SMN302', 'Budi Santoso'),
-          accessCode: 'TKT-BUD99'
-        }
-      ]
-    },
-    {
-      id: 'SMN101',
-      fullname: 'Andi Pratama',
-      whatsapp: '081234567811',
-      email: 'andi.pratama@gmail.com',
-      city: 'Bandar Lampung',
-      institution: 'SMAN 1 Bandar Lampung',
-      ticketCount: 2,
-      categoryId: 'cat-pelajar',
-      bookingDate: '2026-07-20T09:30:00.000Z',
-      status: 'Lunas',
-      verificationStatus: 'Disetujui',
-      paymentMethod: 'transfer',
-      bankDetails: {
-        bankName: 'Bank Mandiri',
-        bankAccount: '114-00-2234455-8',
-        bankAccountName: 'Komunitas Kata Kita'
-      },
-      paymentProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-      tickets: [
-        {
-          ticketNumber: 'FMKKL-2026-000008',
-          bookingCode: 'SMN101',
-          ownerName: 'Andi Pratama',
-          categoryName: 'Pelajar / Mahasiswa',
-          isCheckedIn: false,
-          checkInTime: null,
-          securityHash: generateSecurityHash('FMKKL-2026-000008', 'SMN101', 'Andi Pratama'),
-          accessCode: 'TKT-AND11'
-        },
-        {
-          ticketNumber: 'FMKKL-2026-000009',
-          bookingCode: 'SMN101',
-          ownerName: 'Reza Rahadian',
-          categoryName: 'Pelajar / Mahasiswa',
-          isCheckedIn: false,
-          checkInTime: null,
-          securityHash: generateSecurityHash('FMKKL-2026-000009', 'SMN101', 'Reza Rahadian'),
-          accessCode: 'TKT-REZ88'
-        }
-      ]
-    },
-    {
-      id: 'XAV101',
-      fullname: 'Maria Angelina',
-      whatsapp: '089677889911',
-      email: 'maria.angela@gmail.com',
-      city: 'Bandar Lampung',
-      institution: 'SMA Xaverius 1 Bandar Lampung',
-      ticketCount: 1,
-      categoryId: 'cat-pelajar',
-      bookingDate: '2026-07-20T11:00:00.000Z',
-      status: 'Lunas',
-      verificationStatus: 'Disetujui',
-      paymentMethod: 'offline',
-      offlineDetails: {
-        coordinatorName: 'Rere (Hotline Panitia 1)',
-        coordinatorPhone: '083125721380',
-        receiptNumber: 'KW-00122'
-      },
-      offlineProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-      tickets: [
-        {
-          ticketNumber: 'FMKKL-2026-000010',
-          bookingCode: 'XAV101',
-          ownerName: 'Maria Angelina',
-          categoryName: 'Pelajar / Mahasiswa',
-          isCheckedIn: false,
-          checkInTime: null,
-          securityHash: generateSecurityHash('FMKKL-2026-000010', 'XAV101', 'Maria Angelina'),
-          accessCode: 'TKT-MAR77'
-        }
-      ]
-    },
-    {
-      id: 'MON456',
-      fullname: 'Rian Hidayat',
-      whatsapp: '089911223344',
-      email: 'rian.hidayat@yahoo.com',
-      city: 'Kalianda',
-      institution: 'Umum',
-      ticketCount: 1,
-      categoryId: 'cat-umum',
-      bookingDate: '2026-07-19T11:45:00.000Z',
-      status: 'Ditolak',
-      verificationStatus: 'Ditolak',
-      paymentMethod: 'offline',
-      offlineDetails: {
-        coordinatorName: 'EL (Hotline Panitia 2)',
-        coordinatorPhone: '082159057672',
-        receiptNumber: 'KW-09887'
-      },
-      offlineProof: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-      rejectReason: 'Foto bukti kwitansi tidak terbaca / buram. Silakan unggah ulang.',
-      tickets: [
-        {
-          ticketNumber: 'FMKKL-2026-000011',
-          bookingCode: 'MON456',
-          ownerName: 'Rian Hidayat',
-          categoryName: 'Umum (Reguler)',
-          isCheckedIn: false,
-          checkInTime: null,
-          securityHash: generateSecurityHash('FMKKL-2026-000011', 'MON456', 'Rian Hidayat'),
-          accessCode: 'TKT-RIA22'
-        }
-      ]
-    }
-  ];
+  const sampleBookings: Booking[] = [];
 
   const defaultLogs: ActivityLog[] = [
     {
       id: 'log-1',
-      timestamp: '2026-07-20T08:00:00.000Z',
+      timestamp: new Date().toISOString(),
       operator: 'Sistem',
       action: 'Inisialisasi Database',
-      details: 'Sistem Tiket Online Monolog Lampung berhasil diinisialisasi.'
+      details: 'Sistem Tiket Online Monolog Lampung berhasil disiapkan dalam kondisi bersih.'
     }
   ];
 
-  const defaultEmails: EmailLog[] = [
-    {
-      id: 'eml-1',
-      timestamp: '2026-07-18T14:36:00.000Z',
-      recipient: 'farhan.m@gmail.com',
-      subject: 'Tiket Festival Monolog Anda Telah Disetujui',
-      body: 'Selamat! Pembayaran Anda telah diverifikasi oleh panitia Festival Monolog Komunitas Kata Kita. Silakan klik tombol di bawah untuk mengunduh e-ticket Anda.',
-      status: 'Sent'
-    }
-  ];
+  const defaultEmails: EmailLog[] = [];
 
   const defaultDB = {
     eventSettings: defaultSettings,
@@ -468,7 +211,7 @@ function initializeDB() {
     bookings: sampleBookings,
     logs: defaultLogs,
     emails: defaultEmails,
-    ticketCounter: 3 // seed generated 3 ticket numbers
+    ticketCounter: 0
   };
 
   writeDB(defaultDB);
@@ -694,6 +437,14 @@ async function startServer() {
         currentCounter++;
         const ticketNumber = generateNextTicketNumber(currentCounter - 1);
         const ownerName = ticketNames && ticketNames[i] ? ticketNames[i] : `${fullname} [Ticket ${i + 1}]`;
+        // Determine max check-ins allowed based on ticket category
+        let maxCheckIns = 1;
+        if (category.id === 'cat-5-show' || category.name.includes('5 Show') || category.name.includes('5')) {
+          maxCheckIns = 5;
+        } else if (category.id === 'cat-2-show' || category.name.includes('2 Show') || category.name.includes('2')) {
+          maxCheckIns = 2;
+        }
+
         tickets.push({
           ticketNumber,
           bookingCode,
@@ -701,6 +452,9 @@ async function startServer() {
           categoryName: category.name,
           isCheckedIn: false,
           checkInTime: null,
+          checkInCount: 0,
+          maxCheckIns,
+          checkInLogs: [],
           securityHash: generateSecurityHash(ticketNumber, bookingCode, ownerName),
           accessCode: generateUniqueAccessCode(db)
         });
@@ -1095,21 +849,45 @@ Panitia Festival Monolog Komunitas Kata Kita`;
         return res.status(400).json({ error: `Registrasi ditangguhkan. Status pemesanan tiket ini adalah: "${foundBooking.status}".` });
       }
 
-      // Check if already checked in
-      if (foundTicket.isCheckedIn) {
+      // Determine max check-ins for this ticket
+      let maxAllowed = foundTicket.maxCheckIns || 1;
+      if (!foundTicket.maxCheckIns) {
+        const catName = foundTicket.categoryName || '';
+        if (catName.includes('5 Show') || catName.includes('5') || catName.includes('Maraton')) {
+          maxAllowed = 5;
+        } else if (catName.includes('2 Show') || catName.includes('2') || catName.includes('Double')) {
+          maxAllowed = 2;
+        }
+        foundTicket.maxCheckIns = maxAllowed;
+      }
+
+      const currentCount = foundTicket.checkInCount ?? (foundTicket.isCheckedIn ? maxAllowed : 0);
+
+      // Check if all check-in quota has been exhausted
+      if (currentCount >= maxAllowed) {
         return res.status(400).json({
-          error: 'Tiket sudah pernah digunakan!',
+          error: `TOLAK MASUK: Kuota tiket sudah HABIS! Tiket (${foundTicket.categoryName}) ini berhak untuk ${maxAllowed} Show dan telah dipindai ${currentCount}/${maxAllowed} kali.`,
           ownerName: foundTicket.ownerName,
           ticketNumber: foundTicket.ticketNumber,
           categoryName: foundTicket.categoryName,
-          checkInTime: foundTicket.checkInTime
+          checkInTime: foundTicket.checkInTime,
+          checkInCount: currentCount,
+          maxCheckIns: maxAllowed
         });
       }
 
-      // Successful check-in!
+      // Successful check-in for this show session!
+      const newCount = currentCount + 1;
       const checkInTimeStr = new Date().toISOString();
-      foundTicket.isCheckedIn = true;
+      const op = operatorName || 'Gate Staff';
+
+      foundTicket.checkInCount = newCount;
       foundTicket.checkInTime = checkInTimeStr;
+      foundTicket.isCheckedIn = newCount >= maxAllowed; // Fully used only when count reaches max
+      foundTicket.checkInLogs = [
+        ...(foundTicket.checkInLogs || []),
+        { time: checkInTimeStr, operator: op, checkInIndex: newCount }
+      ];
 
       // Update in database
       const bookingIdx = db.bookings.findIndex((b: Booking) => b.id === foundBooking!.id);
@@ -1118,13 +896,17 @@ Panitia Festival Monolog Komunitas Kata Kita`;
       
       saveDB(db);
 
-      const op = operatorName || 'Gate Staff';
-      addLog(op, 'Check-In Pengunjung', `Tiket ${ticketNumber} (${foundTicket.ownerName} - ${foundTicket.categoryName}) berhasil check-in di gate.`);
+      const remainingScans = maxAllowed - newCount;
+      const logMessage = `Tiket ${ticketNumber} (${foundTicket.ownerName} - ${foundTicket.categoryName}) check-in Show ke-${newCount}/${maxAllowed}. Sisa kuota: ${remainingScans} Show.`;
+      addLog(op, 'Check-In Pengunjung', logMessage);
 
       res.json({
         success: true,
-        message: 'Check-In Sukses!',
-        ticket: foundTicket
+        message: `Check-In Show Ke-${newCount} dari ${maxAllowed} BERHASIL! ${remainingScans > 0 ? `(Sisa Kuota: ${remainingScans} Show Masuk)` : '(Kuota Scan Tiket Lunas / Selesai)'}`,
+        ticket: foundTicket,
+        checkInCount: newCount,
+        maxCheckIns: maxAllowed,
+        remainingCheckIns: remainingScans
       });
     } catch (error: any) {
       res.status(500).json({ error: 'Gagal memproses check-in: ' + error.message });

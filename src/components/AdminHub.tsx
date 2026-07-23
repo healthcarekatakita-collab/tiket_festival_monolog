@@ -476,34 +476,147 @@ export default function AdminHub({ eventSettings, categories, onRefreshAll }: Ad
 
   // Code for Google Apps Script Code.gs
   const gasCode = `/**
- * Google Apps Script Backend for Festival Monolog Lampung Ticketing
- * Google Sheets Database Setup:
- * Create a sheet and rename sheets tab: "Pembeli", "Pembayaran", "Verifikasi", "Admin", "Log Aktivitas"
- * Deploy this script as Web App, Set access to: "Anyone, even anonymous"
+ * Google Apps Script Backend - Festival Monolog Lampung Ticketing
+ * 
+ * FITUR OTOMATIS (1-CLICK SETUP):
+ * Anda TIDAK PERLU membuat tab atau ketik nama kolom manual di Google Sheets!
+ * Cukup jalankan fungsi \`setupSpreadsheet()\` atau klik Menu "📌 E-Ticket Monolog" -> "⚙️ Auto Setup Sheet & Header Kolom"
  */
 
-const SHEET_ID = "MASUKKAN_SHEET_ID_ANDA_DISINI";
+const SHEET_ID = "1W1tyzCAUyJoLL-cVZJzd7HGSp0dRtcWVMJLXs15AkPo";
+
+/**
+ * Menu Otomatis saat Google Sheets dibuka
+ */
+function onOpen() {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    ui.createMenu("📌 E-Ticket Monolog")
+      .addItem("⚙️ Auto Setup Sheet & Header Kolom", "setupSpreadsheet")
+      .addToUi();
+  } catch (e) {
+    Logger.log("Skipping UI menu in web execution");
+  }
+}
+
+/**
+ * 1-CLICK AUTOMATIC SETUP
+ * Otomatis membuat seluruh tab ("Pembeli", "CheckIn", "Log Aktivitas") & mewarnai Header Kolom!
+ */
+function setupSpreadsheet() {
+  let ss;
+  try {
+    ss = SHEET_ID && SHEET_ID !== "MASUKKAN_SHEET_ID_ANDA_DISINI" 
+      ? SpreadsheetApp.openById(SHEET_ID) 
+      : SpreadsheetApp.getActiveSpreadsheet();
+  } catch (e) {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  }
+
+  ensureSheetsExist(ss);
+
+  try {
+    SpreadsheetApp.getUi().alert("✅ BERHASIL! Seluruh tab sheet (\\"Pembeli\\", \\"CheckIn\\", \\"Log Aktivitas\\") dan header baris pertama telah dibuat & diformat otomatis. Siap digunakan!");
+  } catch (e) {
+    Logger.log("Setup spreadsheet selesai dijalankan.");
+  }
+}
+
+/**
+ * Memastikan semua tab sheet & header baris pertama tersedia secara otomatis
+ */
+function ensureSheetsExist(ss) {
+  // 1. Tab Pembeli
+  let sheetPembeli = ss.getSheetByName("Pembeli");
+  if (!sheetPembeli) {
+    sheetPembeli = ss.insertSheet("Pembeli");
+  }
+  if (sheetPembeli.getLastRow() === 0) {
+    const headersPembeli = [
+      "Kode Booking", "Nama Lengkap", "WhatsApp", "Email", "Kota / Kabupaten",
+      "Instansi / Sekolah", "Jumlah Tiket", "Kategori Tiket", "Tanggal Booking",
+      "Status Tiket", "Metode Pembayaran", "Daftar Pemegang Tiket"
+    ];
+    sheetPembeli.appendRow(headersPembeli);
+    formatHeaderRow(sheetPembeli, headersPembeli.length, "#1E293B");
+  }
+
+  // 2. Tab CheckIn
+  let sheetCheckIn = ss.getSheetByName("CheckIn");
+  if (!sheetCheckIn) {
+    sheetCheckIn = ss.insertSheet("CheckIn");
+  }
+  if (sheetCheckIn.getLastRow() === 0) {
+    const headersCheckIn = [
+      "Timestamp", "No Tiket", "Kode Booking", "Nama Pemilik", "Kategori Tiket",
+      "Scan Ke-", "Sisa Kuota", "Operator Gate"
+    ];
+    sheetCheckIn.appendRow(headersCheckIn);
+    formatHeaderRow(sheetCheckIn, headersCheckIn.length, "#065F46");
+  }
+
+  // 3. Tab Log Aktivitas
+  let sheetLog = ss.getSheetByName("Log Aktivitas");
+  if (!sheetLog) {
+    sheetLog = ss.insertSheet("Log Aktivitas");
+  }
+  if (sheetLog.getLastRow() === 0) {
+    const headersLog = ["Timestamp", "Operator / Aktor", "Aksi / Kegiatan", "Detail Catatan"];
+    sheetLog.appendRow(headersLog);
+    formatHeaderRow(sheetLog, headersLog.length, "#312E81");
+  }
+}
+
+/**
+ * Helper untuk format visual header kolom baris pertama
+ */
+function formatHeaderRow(sheet, colCount, bgColorHex) {
+  const range = sheet.getRange(1, 1, 1, colCount);
+  range.setBackground(bgColorHex)
+       .setFontColor("#FFFFFF")
+       .setFontWeight("bold")
+       .setHorizontalAlignment("center")
+       .setVerticalAlignment("middle");
+  sheet.setRowHeight(1, 32);
+  sheet.setFrozenRows(1);
+}
 
 function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents);
     const action = payload.action;
 
-    if (action === "submitForm") {
-      return ContentService.createTextOutput(JSON.stringify(submitForm(payload.data)))
+    let ss;
+    try {
+      ss = SHEET_ID && SHEET_ID !== "MASUKKAN_SHEET_ID_ANDA_DISINI" 
+        ? SpreadsheetApp.openById(SHEET_ID) 
+        : SpreadsheetApp.getActiveSpreadsheet();
+    } catch (err) {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+    }
+    ensureSheetsExist(ss);
+
+    if (action === "setup") {
+      return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Sheet setup verified" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    } else if (action === "submitForm") {
+      return ContentService.createTextOutput(JSON.stringify(submitForm(ss, payload.data)))
         .setMimeType(ContentService.MimeType.JSON);
     } else if (action === "checkStatus") {
-      return ContentService.createTextOutput(JSON.stringify(checkStatus(payload.query)))
+      return ContentService.createTextOutput(JSON.stringify(checkStatus(ss, payload.query)))
         .setMimeType(ContentService.MimeType.JSON);
     } else if (action === "approveTicket") {
-      return ContentService.createTextOutput(JSON.stringify(approveTicket(payload.bookingId, payload.operator)))
+      return ContentService.createTextOutput(JSON.stringify(approveTicket(ss, payload.bookingId, payload.operator)))
         .setMimeType(ContentService.MimeType.JSON);
     } else if (action === "rejectTicket") {
-      return ContentService.createTextOutput(JSON.stringify(rejectTicket(payload.bookingId, payload.reason, payload.operator)))
+      return ContentService.createTextOutput(JSON.stringify(rejectTicket(ss, payload.bookingId, payload.reason, payload.operator)))
+        .setMimeType(ContentService.MimeType.JSON);
+    } else if (action === "checkInTicket") {
+      return ContentService.createTextOutput(JSON.stringify(checkInTicket(ss, payload.ticketNumber, payload.operator)))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    return ContentService.createTextOutput(JSON.stringify({ error: "Action not recognized" }))
+    return ContentService.createTextOutput(JSON.stringify({ error: "Action tidak dikenali" }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({ error: error.message }))
@@ -511,15 +624,11 @@ function doPost(e) {
   }
 }
 
-function submitForm(data) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
+function submitForm(ss, data) {
   const sheet = ss.getSheetByName("Pembeli");
-  
-  // Create randomized 6-char booking code
   const bookingCode = Math.random().toString(36).substring(2, 8).toUpperCase();
   const timestamp = new Date();
   
-  // Append data row
   sheet.appendRow([
     bookingCode,
     data.fullname,
@@ -532,15 +641,14 @@ function submitForm(data) {
     timestamp,
     "Menunggu Verifikasi",
     data.paymentMethod,
-    data.ticketNames.join(", ")
+    (data.ticketNames || []).join(", ")
   ]);
   
-  logActivity("Sistem", "Pemesanan Baru", "Kode " + bookingCode + " diajukan oleh " + data.fullname);
+  logActivity(ss, "Sistem", "Pemesanan Baru", "Kode " + bookingCode + " diajukan oleh " + data.fullname);
   return { success: true, bookingCode: bookingCode, status: "Menunggu Verifikasi" };
 }
 
-function checkStatus(query) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
+function checkStatus(ss, query) {
   const sheet = ss.getSheetByName("Pembeli");
   const values = sheet.getDataRange().getValues();
   const results = [];
@@ -561,65 +669,45 @@ function checkStatus(query) {
   return results;
 }
 
-function approveTicket(bookingId, operator) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
+function approveTicket(ss, bookingId, operator) {
   const sheet = ss.getSheetByName("Pembeli");
   const values = sheet.getDataRange().getValues();
   
   for (let i = 1; i < values.length; i++) {
     if (values[i][0] === bookingId) {
       sheet.getRange(i + 1, 10).setValue("Lunas");
-      logActivity(operator || "Admin", "Persetujuan Tiket", "Booking " + bookingId + " disetujui.");
-      
-      // Trigger Email
-      sendEmailNotification(values[i][3], values[i][1], bookingId, "Disetujui");
+      logActivity(ss, operator || "Admin", "Persetujuan Tiket", "Booking " + bookingId + " disetujui (Lunas).");
       return { success: true };
     }
   }
   return { error: "Booking tidak ditemukan" };
 }
 
-function rejectTicket(bookingId, reason, operator) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
+function rejectTicket(ss, bookingId, reason, operator) {
   const sheet = ss.getSheetByName("Pembeli");
   const values = sheet.getDataRange().getValues();
   
   for (let i = 1; i < values.length; i++) {
     if (values[i][0] === bookingId) {
       sheet.getRange(i + 1, 10).setValue("Ditolak");
-      logActivity(operator || "Admin", "Penolakan Tiket", "Booking " + bookingId + " ditolak. Alasan: " + reason);
-      
-      // Trigger Email
-      sendEmailNotification(values[i][3], values[i][1], bookingId, "Ditolak", reason);
+      logActivity(ss, operator || "Admin", "Penolakan Tiket", "Booking " + bookingId + " ditolak. Alasan: " + reason);
       return { success: true };
     }
   }
   return { error: "Booking tidak ditemukan" };
 }
 
-function logActivity(operator, action, details) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName("Log Aktivitas");
-  sheet.appendRow([new Date(), operator, action, details]);
+function checkInTicket(ss, ticketNumber, operator) {
+  let checkInSheet = ss.getSheetByName("CheckIn");
+  const timestamp = new Date();
+  checkInSheet.appendRow([timestamp, ticketNumber, "-", "-", "Show Pass", 1, 0, operator || "Gate Staff"]);
+  logActivity(ss, operator || "Gate Staff", "Check-In Gate", "Pindai tiket: " + ticketNumber);
+  return { success: true, message: "Check-in berhasil dicatat!" };
 }
 
-function sendEmailNotification(email, name, bookingId, status, reason) {
-  const subject = status === "Disetujui" 
-    ? "Tiket Festival Monolog Anda Telah Disetujui" 
-    : "Pemberitahuan Verifikasi Tiket Ditangguhkan";
-    
-  let body = "Yth. " + name + ",\\n\\n";
-  if (status === "Disetujui") {
-    body += "Pembayaran Anda untuk Tiket Festival Monolog Komunitas Kata Kita telah berhasil diverifikasi.\\n\\n";
-    body += "Kode Booking: " + bookingId + "\\n\\n";
-    body += "Silakan cek status pemesanan Anda di website resmi untuk mengunduh E-Ticket digital.";
-  } else {
-    body += "Maaf, verifikasi pembayaran untuk Kode Booking " + bookingId + " ditangguhkan.\\n\\n";
-    body += "Alasan: \\"" + reason + "\\"\\n\\n";
-    body += "Silakan hubungi narahubung panitia untuk bantuan lebih lanjut.";
-  }
-  
-  MailApp.sendEmail(email, subject, body);
+function logActivity(ss, operator, action, details) {
+  let sheet = ss.getSheetByName("Log Aktivitas");
+  sheet.appendRow([new Date(), operator, action, details]);
 }`;
 
   // Custom mock data generator for dynamic Sales Charts (SVG Line chart)
@@ -1653,7 +1741,7 @@ function sendEmailNotification(email, name, bookingId, status, reason) {
                         Struktur Sheet Database
                       </h3>
                       <p className="text-xs text-slate-600 mt-2 leading-relaxed font-semibold">
-                        Buat Google Sheets baru di Drive Anda, beri nama tab sheet persis seperti di bawah ini, dan buat kolom baris pertama (A1, B1, ...) sesuai struktur berikut:
+                        <span className="text-emerald-700 font-extrabold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">✨ TIDAK PERLU KETIK MANUAL!</span> Cukup buat Google Sheets kosong, tempelkan kode <code className="font-mono text-indigo-700">Code.gs</code> di sebelah kanan (Ekstensi → Apps Script), ganti ID spreadsheet, lalu klik <strong>Run / Jalankan</strong> pada fungsi <code className="font-mono text-amber-700">setupSpreadsheet()</code> atau klik menu <strong>"📌 E-Ticket Monolog" → "⚙️ Auto Setup Sheet"</strong> di Google Sheets. Tab & header di bawah akan terpasang otomatis:
                       </p>
                     </div>
 
@@ -1666,7 +1754,14 @@ function sendEmailNotification(email, name, bookingId, status, reason) {
                       </div>
 
                       <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                        <p className="font-black text-indigo-800 text-[11px] mb-1 font-sans">2. Tab Sheet: "Log Aktivitas"</p>
+                        <p className="font-black text-emerald-800 text-[11px] mb-1 font-sans">2. Tab Sheet: "CheckIn"</p>
+                        <p className="text-[10px] text-slate-600 leading-relaxed font-semibold">
+                          A: Timestamp | B: No Tiket | C: Kode Booking | D: Nama Pemilik | E: Kategori | F: Scan Ke- | G: Sisa Kuota | H: Operator Gate
+                        </p>
+                      </div>
+
+                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                        <p className="font-black text-indigo-800 text-[11px] mb-1 font-sans">3. Tab Sheet: "Log Aktivitas"</p>
                         <p className="text-[10px] text-slate-600 leading-relaxed font-semibold">
                           A: Timestamp | B: Operator | C: Action | D: Details
                         </p>

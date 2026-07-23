@@ -37,6 +37,12 @@ export interface EventSettings {
   googleAppsScriptUrl?: string;
 }
 
+export interface CheckInLogEntry {
+  time: string;
+  operator?: string;
+  checkInIndex: number;
+}
+
 export interface IndividualTicket {
   ticketNumber: string; // FMKKL-2026-000001
   bookingCode: string;
@@ -44,6 +50,9 @@ export interface IndividualTicket {
   categoryName: string;
   isCheckedIn: boolean;
   checkInTime: string | null;
+  checkInCount?: number; // Number of times scanned (e.g., 0, 1, 2, 5)
+  maxCheckIns?: number; // Total entrance quota allowed (1, 2, or 5)
+  checkInLogs?: CheckInLogEntry[];
   securityHash: string; // Anti-counterfeiting hash
   accessCode?: string; // Secure passcode/PIN for each ticket owner
 }
